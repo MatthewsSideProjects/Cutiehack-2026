@@ -16,7 +16,7 @@ public static class Level1Builder
     const string MatFolder = "Assets/Art/Materials";
     const string SpriteFolder = "Assets/Art/Terrain";
 
-    enum Look { None, Floor, Platform, Wall }
+    internal enum Look { None, Floor, Platform, Wall }
 
     static readonly Color Green = new Color32(110, 170, 90, 255);
     static readonly Color Brown = new Color32(170, 120, 70, 255);
@@ -116,14 +116,14 @@ public static class Level1Builder
 
         // ---- Section 5: door (tiles 56-69) ----
         Add(root, "S5 crawl ceiling", 60, 62, 1, 2, null, gray, look: Look.Wall);
-        Add(root, "Door", 67, 67, 0, 1, null, amber, true);
+        AddDoor(root, "Door", 67, GetLevel2Spawn());
 
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         Selection.activeGameObject = rootGo;
         Debug.Log("Level 1 built under '" + RootName + "'. Save the scene with Cmd+S.");
     }
 
-    static GameObject Add(Transform root, string name, int x1, int x2, int y1, int y2,
+    internal static GameObject Add(Transform root, string name, int x1, int x2, int y1, int y2,
         string tag, Material mat, bool trigger = false, Look look = Look.None)
     {
         GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -197,20 +197,79 @@ public static class Level1Builder
         go.GetComponent<Collider>().isTrigger = true;
     }
 
-    static void AddCheckpoint(Transform root, string name, int tileX)
+    // Lamppost checkpoint: 1 x 2.5 units (32x80 px at 32 px per unit), standing on the floor at tileX.
+    internal static void AddCheckpoint(Transform root, string name, int tileX, float floorY = 0f)
     {
-        GameObject go = Add(root, name, tileX, tileX, 0, 1, null, red, true);
-        System.Type type = System.Type.GetType("CheckpointDetection, Assembly-CSharp");
-        if (type == null) return;
-        Component comp = go.AddComponent(type);
-        if (playerScript == null) return;
-        SerializedObject so = new SerializedObject(comp);
-        SerializedProperty prop = so.FindProperty("playerScript");
-        if (prop != null && prop.propertyType == SerializedPropertyType.ObjectReference)
+        Sprite off = LoadSprite("Assets/Art/Lamp/lamp_off.png", 32f);
+        Sprite on = LoadSprite("Assets/Art/Lamp/lamp_on.png", 32f);
+
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(root, false);
+        go.transform.localPosition = new Vector3(tileX + 0.5f, floorY + 1.25f, 0f);
+        BoxCollider box = go.AddComponent<BoxCollider>();
+        box.isTrigger = true;
+        box.size = new Vector3(1f, 2.5f, 1f);
+
+        if (off != null)
         {
-            prop.objectReferenceValue = playerScript;
-            so.ApplyModifiedProperties();
+            SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = off;
         }
+        else
+        {
+            Debug.LogWarning("Missing lamp sprites, " + name + " is invisible.");
+        }
+
+        CheckpointDetection cp = go.AddComponent<CheckpointDetection>();
+        cp.playerScript = playerScript as BaseMovement;
+        cp.offSprite = off;
+        cp.onSprite = on;
+    }
+
+    // Door: 1.5 x 2.5 units (48x80 px at 32 px per unit), standing on the floor at tileX.
+    // The trigger is narrow so she has to walk into the middle of the doorway.
+    internal static DoorScript AddDoor(Transform root, string name, int tileX, Transform destination, float floorY = 0f)
+    {
+        Sprite closed = LoadSprite("Assets/Art/Door/door_closed.png", 32f);
+        Sprite open = LoadSprite("Assets/Art/Door/door_open.png", 32f);
+
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(root, false);
+        go.transform.localPosition = new Vector3(tileX + 0.5f, floorY + 1.25f, 0.2f);
+        BoxCollider box = go.AddComponent<BoxCollider>();
+        box.isTrigger = true;
+        box.size = new Vector3(0.5f, 2.5f, 1f);
+        SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = closed;
+
+        DoorScript door = go.AddComponent<DoorScript>();
+        door.closedSprite = closed;
+        door.openSprite = open;
+        door.destination = destination;
+        return door;
+    }
+
+    // Level 2 lives in this same scene, 1000 units to the right. It is a separate root object,
+    // so rebuilding Level 1 never touches it. Created once with a starter floor and a spawn point.
+    const float Level2X = 1000f;
+    internal static Transform GetLevel2Spawn()
+    {
+        GameObject level2 = GameObject.Find("Level2");
+        if (level2 == null)
+        {
+            level2 = new GameObject("Level2");
+            Undo.RegisterCreatedObjectUndo(level2, "Build Level 1");
+            level2.transform.position = new Vector3(Level2X, 0f, 0f);
+            Add(level2.transform, "Start floor", 0, 9, -3, -1, "Floor", green, look: Look.Floor);
+        }
+        Transform spawn = level2.transform.Find("Spawn");
+        if (spawn == null)
+        {
+            spawn = new GameObject("Spawn").transform;
+            spawn.SetParent(level2.transform, false);
+            spawn.localPosition = new Vector3(2f, 2f, 0f);
+        }
+        return spawn;
     }
 
     static void SetTag(GameObject go, string tag)
@@ -222,7 +281,11 @@ public static class Level1Builder
 
     static Sprite LoadSprite(string file)
     {
-        string path = SpriteFolder + "/" + file + ".png";
+        return LoadSprite(SpriteFolder + "/" + file + ".png", 16f);
+    }
+
+    static Sprite LoadSprite(string path, float ppu)
+    {
         TextureImporter imp = AssetImporter.GetAtPath(path) as TextureImporter;
         if (imp == null)
         {
@@ -235,7 +298,7 @@ public static class Level1Builder
         bool needsChange =
             imp.textureType != TextureImporterType.Sprite ||
             imp.spriteImportMode != SpriteImportMode.Single ||
-            imp.spritePixelsPerUnit != 16f ||
+            imp.spritePixelsPerUnit != ppu ||
             imp.filterMode != FilterMode.Point ||
             imp.textureCompression != TextureImporterCompression.Uncompressed ||
             s.spriteMeshType != SpriteMeshType.FullRect;
@@ -244,7 +307,7 @@ public static class Level1Builder
         {
             imp.textureType = TextureImporterType.Sprite;
             imp.spriteImportMode = SpriteImportMode.Single;
-            imp.spritePixelsPerUnit = 16f;
+            imp.spritePixelsPerUnit = ppu;
             imp.filterMode = FilterMode.Point;
             imp.textureCompression = TextureImporterCompression.Uncompressed;
             imp.mipmapEnabled = false;
@@ -256,7 +319,7 @@ public static class Level1Builder
         return AssetDatabase.LoadAssetAtPath<Sprite>(path);
     }
 
-    static Material GetMaterial(string name, Color color)
+    internal static Material GetMaterial(string name, Color color)
     {
         EnsureFolder("Assets", "Art");
         EnsureFolder("Assets/Art", "Materials");

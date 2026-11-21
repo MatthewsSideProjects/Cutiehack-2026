@@ -12,7 +12,15 @@ public class BaseMovement : MonoBehaviour
     public TimerScript timerScript;
     public GameObject startingCollectableObject;
     public float collectableDisplayOffset;
-    public bool spriteFacesLeft; // tick if the rabbit faces the wrong way when walking
+    public bool spriteFacesLeft; // tick if the rabbit faces the wrong way when running
+    public Sprite[] idleFrames;
+    public Sprite[] runFrames;
+    public float idleFps = 6f;
+    public float runFps = 10f;
+    public float fallLimit = -8f; // below this y she counts as fallen into a pit
+    private MovingPlate plate; // the moving plate she is standing on, if any
+    private float animTime;
+    private bool wasRunning;
     private Rigidbody rb;
     private SpriteRenderer sprite;
     private bool canJump;
@@ -31,16 +39,31 @@ public class BaseMovement : MonoBehaviour
     {
         float x = Input.GetAxisRaw("Horizontal");
         float y = Input.GetAxisRaw("Vertical");
+        if (canMove && transform.position.y < fallLimit) respawn(); // fell into a pit
         if (canMove)
         {
-            Vector3 direction = new Vector3(x, 0f, 0f);
-            transform.position += direction * speed * Time.deltaTime;
+            // Move through the Rigidbody so walls and ceilings block her.
+            // Setting transform.position teleported her into colliders and she squeezed through gaps.
+            // On a moving plate, add its sideways speed so she rides along.
+            float carry = plate != null ? plate.Velocity.x : 0f;
+            rb.linearVelocity = new Vector3(x * speed + carry, rb.linearVelocity.y, 0f);
             if (sprite != null && x != 0) sprite.flipX = (x < 0) != spriteFacesLeft;
         }
+        animate(canMove && x != 0f);
         if (canMove && canJump && y > 0)
         {
             jump();
         }
+    }
+    private void animate(bool running)
+    {
+        Sprite[] frames = running ? runFrames : idleFrames;
+        if (sprite == null || frames == null || frames.Length == 0) return;
+        if (running != wasRunning) animTime = 0f; // start each cycle from its first frame
+        wasRunning = running;
+        animTime += Time.deltaTime;
+        float fps = running ? runFps : idleFps;
+        sprite.sprite = frames[(int)(animTime * fps) % frames.Length];
     }
     public void jump()
     {
@@ -55,8 +78,17 @@ public class BaseMovement : MonoBehaviour
         }
         if (other.gameObject.tag == "Obstacle")
         {
-            endGame(DeathType.Obstacle);
+            respawn(); // hazards send her back to the last lit lamp
         }
+    }
+    private void OnCollisionStay(Collision other)
+    {
+        MovingPlate p = other.gameObject.GetComponent<MovingPlate>();
+        if (p != null && transform.position.y > other.transform.position.y) plate = p;
+    }
+    private void OnCollisionExit(Collision other)
+    {
+        if (plate != null && other.gameObject == plate.gameObject) plate = null;
     }
     public void endGame(DeathType deathType)
     {
@@ -74,6 +106,25 @@ public class BaseMovement : MonoBehaviour
     public void setRespawn(Vector3 respawn)
     {
         currentRespawn = respawn;
+    }
+    public int ItemCount => collectables.Count;
+    // Stop input and physics, e.g. while walking into the door.
+    public void lockControls()
+    {
+        canMove = false;
+        rb.linearVelocity = Vector3.zero;
+        rb.isKinematic = true;
+    }
+    public void unlockControls()
+    {
+        rb.isKinematic = false;
+        canMove = true;
+    }
+    public void respawn()
+    {
+        rb.linearVelocity = Vector3.zero;
+        rb.position = currentRespawn;
+        transform.position = currentRespawn;
     }
     public void obtainCollectable(CollectableScript collectable)
     {
