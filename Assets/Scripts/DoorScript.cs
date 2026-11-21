@@ -24,20 +24,29 @@ public class DoorScript : MonoBehaviour
         if (sprite != null && closedSprite != null) sprite.sprite = closedSprite;
     }
 
-    private void OnTriggerEnter(Collider other)
+    // Enter logs why the door won't open; Stay lets her change size while standing in the doorway.
+    private void OnTriggerEnter(Collider other) { TryEnter(other, true); }
+    private void OnTriggerStay(Collider other) { TryEnter(other, false); }
+
+    private void TryEnter(Collider other, bool explain)
     {
         if (entering || other.gameObject.tag != "Player") return;
         BaseMovement player = other.GetComponent<BaseMovement>();
         if (player == null) return;
 
+        if (player.Size != PlayerSize.Medium)
+        {
+            if (explain) Debug.Log("The door only opens at regular size.");
+            return;
+        }
         if (player.ItemCount < itemsNeeded)
         {
-            Debug.Log("The door is locked. Items: " + player.ItemCount + "/" + itemsNeeded);
+            if (explain) Debug.Log("The door is locked. Items: " + player.ItemCount + "/" + itemsNeeded);
             return;
         }
         if (destination == null)
         {
-            Debug.LogError("Door has no Destination set.");
+            if (explain) Debug.LogError("Door has no Destination set.");
             return;
         }
         StartCoroutine(Enter(player));

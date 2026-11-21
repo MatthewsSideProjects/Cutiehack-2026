@@ -12,8 +12,10 @@ using UnityEngine.SceneManagement;
 // Section 2 (x 32-63):  a side-to-side plate, then an up-and-down plate to a ledge (top y = 5).
 // Section 3 (x 64-87):  four plates bobbing up and down out of phase over a long pit.
 // Section 4 (x 88-125): cake climb, inside the cake. Four cream floors zigzag upward, each with a
-//                       4-tile hole and a sugar-cube step under it. Giant forks stab out of the back
+//                       4-tile hole and a gift-box step under it. Giant forks stab out of the back
 //                       of the cake toward the camera on fixed loops, shaking first as a warning.
+//                       Two gifts must be pushed into place (Big) first: one from outside the cake
+//                       for the first climb, one for the last climb. Then hop up at Regular size.
 //
 // Heights are tuned for Jump Force 10 with Gravity Mod 20: a jump rises about 2.5 units.
 public static class Level2Builder
@@ -21,7 +23,7 @@ public static class Level2Builder
     const string RootName = "Level2";
     const float RootX = 1000f;
 
-    static Material floorMat, plateMat, candleMat, flameMat, cakeMat, frostingMat, creamMat, insideMat, crumbMat, berryMat, forkMat;
+    static Material floorMat, plateMat, candleMat, flameMat, cakeMat, frostingMat, creamMat, insideMat, crumbMat, berryMat, forkMat, ribbonMat;
 
     [MenuItem("CutieHack/Build Level 2")]
     public static void Build()
@@ -47,6 +49,7 @@ public static class Level2Builder
         crumbMat = Level1Builder.GetMaterial("Level2Crumb", new Color32(195, 145, 80, 255));
         berryMat = Level1Builder.GetMaterial("Level2Berry", new Color32(220, 60, 80, 255));
         forkMat = Level1Builder.GetMaterial("Level2Fork", new Color32(185, 192, 205, 255));
+        ribbonMat = Level1Builder.GetMaterial("Level2Ribbon", new Color32(255, 220, 90, 255));
 
         GameObject rootGo = new GameObject(RootName);
         Undo.RegisterCreatedObjectUndo(rootGo, "Build Level 2");
@@ -91,10 +94,10 @@ public static class Level2Builder
 
     // The cake is one tall layer cake (x 92-113) the player climbs inside.
     // Layer k (1-4) is a cream filling floor with its top at y = 5 + 4k and a 4-tile hole at one
-    // end: odd layers at the right, even layers at the left. A 2-high sugar cube under each hole
+    // end: odd layers at the right, even layers at the left. A 2-high gift box under each hole
     // splits the 4-unit climb into two 2-unit hops, leaving 3.5 units of headroom per floor.
     const int CakeLeft = 92, CakeRight = 113, Hole = 4, Layers = 4;
-    const float LayerGap = 4f, Ground = 5f, StepH = 2f;
+    const float LayerGap = 4f, Ground = 5f;
 
     static void BuildCake(Transform root)
     {
@@ -116,10 +119,11 @@ public static class Level2Builder
             float top = Ground + LayerGap * k;
             Box(root, "Cake layer " + k, (x1 + x2) / 2f, top - 0.25f, x2 - x1, 0.5f, creamMat, "Floor");
 
-            // Sugar cube on the floor below, under the inner half of this layer's hole.
+            // Gift box step on the floor below, under the inner half of this layer's hole.
+            // Layer 1 and the top layer have none in place: she has to push one there (see below).
+            if (k == 1 || k == Layers) continue;
             float stepX = holeRight ? CakeRight + 1 - Hole + 1f : CakeLeft + Hole - 1f;
-            float below = top - LayerGap;
-            Box(root, "Sugar cube " + k, stepX, below + StepH / 2f, 2f, StepH, creamMat, "Floor");
+            Present(root, "Gift step " + k, stepX, top - LayerGap, k);
         }
 
         // ---- Looks (no colliders, behind the play layer) ----
@@ -147,7 +151,7 @@ public static class Level2Builder
             float x = CakeLeft - 0.5f + i * 2f;
             Deco(root, "Frosting drip " + (i + 1), x, summit - 0.7f - drips[i] / 2f, 0.7f, drips[i], 0.45f, frostingMat);
         }
-        int[] candleX = { 94, 97, 103 }; // clear of the forks at 100 and 106
+        int[] candleX = { 94, 99, 103 };
         foreach (int cx in candleX)
         {
             Deco(root, "Cake candle " + cx, cx + 0.5f, summit + 1f, 0.5f, 2f, 1f, candleMat);
@@ -157,13 +161,25 @@ public static class Level2Builder
         Level1Builder.AddCheckpoint(root, "Checkpoint 4", CakeLeft + Hole + 1, Ground + LayerGap * 2);
 
         // ---- Forks ----
-        // Two per floor (and on top), stabbing out of the back of the cake through her path.
-        // The tines are low, so she can jump over one or wait for it to pull back. Phases are staggered.
-        int[] forkX = { 100, 106 };
-        for (int floor = 0; floor <= Layers; floor++)
-            for (int i = 0; i < forkX.Length; i++)
-                Fork(root, "Fork " + (floor + 1) + (i == 0 ? "a" : "b"), forkX[i] + 0.5f,
-                    Ground + LayerGap * floor + 0.75f, floor * 0.2f + i * 0.5f);
+        // Stabbing out of the back of the cake through her path, spread out and on different timings.
+        // The tines are low, so she can jump over one or wait for it to pull back.
+        // (floor, x, phase). Floor 0 is the ground inside the cake; none on the top.
+        var forks = new (int floor, int x, float phase)[]
+        {
+            (0, 97, 0.0f), (0, 104, 0.45f),
+            (1, 107, 0.2f), (1, 101, 0.7f),
+            (2, 103, 0.35f), (2, 108, 0.85f),
+            (3, 100, 0.5f), // in the present's path: the present blocks it while it's in front
+        };
+        foreach (var f in forks)
+            Fork(root, "Fork " + f.floor + "-" + f.x, f.x + 0.5f, Ground + LayerGap * f.floor + 0.75f, f.phase);
+
+        // Ground floor: no step under layer 1's hole. The gift sits outside, past the cake's right
+        // doorway. Walk through to the end, grow Big, push it back in until she hits the wall
+        // (it slides under; she can't), then go Regular, walk in, climb it and jump up the hole.
+        Present(root, "Gift outside", 120f, Ground, 1);
+        // Floor 3: push this one (as Big) left under the top layer's hole, then climb (as Regular).
+        Present(root, "Gift top", 106f, Ground + LayerGap * 3, 4);
 
         // Summit: door at the right end of the top layer.
         DoorScript door = Level1Builder.AddDoor(root, "Door", CakeRight - 4, null, summit);
@@ -176,8 +192,7 @@ public static class Level2Builder
     const float ForkHomeZ = 1.15f, ForkStab = 2.1f;
     static void Fork(Transform root, string name, float x, float y, float phase)
     {
-        if (y < Ground + LayerGap * Layers) // no sponge behind the top floor to put a hole in
-            Deco(root, name + " hole", x, y, 1.9f, 1.6f, 0.93f, crumbMat);
+        Deco(root, name + " hole", x, y, 1.9f, 1.6f, 0.93f, crumbMat);
 
         GameObject go = new GameObject(name);
         go.transform.SetParent(root, false);
@@ -205,6 +220,32 @@ public static class Level2Builder
         go.transform.localScale = size;
         go.GetComponent<Renderer>().sharedMaterial = forkMat;
         go.tag = "Obstacle";
+    }
+
+    // A 2x2 gift box on a floor at y = floorY: pushable in Big form, and a step to stand on.
+    static readonly Color32[] GiftColors =
+    {
+        new Color32(120, 200, 230, 255), new Color32(170, 130, 230, 255),
+        new Color32(120, 210, 150, 255), new Color32(250, 150, 110, 255),
+    };
+    static void Present(Transform root, string name, float x, float floorY, int colorIndex)
+    {
+        Color32 c = GiftColors[colorIndex % GiftColors.Length];
+        Material mat = Level1Builder.GetMaterial("Level2Gift" + colorIndex % GiftColors.Length, c);
+        GameObject go = Box(root, name, x, floorY + 1f, 2f, 2f, mat, "Floor");
+        Rigidbody rb = go.AddComponent<Rigidbody>();
+        rb.mass = 2f;
+        go.AddComponent<Pushable>();
+        // Ribbon: children scaled against the 2x2 parent, no colliders.
+        foreach (Vector3 size in new[] { new Vector3(0.18f, 1.01f, 1.02f), new Vector3(1.01f, 0.18f, 1.02f) })
+        {
+            GameObject ribbon = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Object.DestroyImmediate(ribbon.GetComponent<Collider>());
+            ribbon.name = "Ribbon";
+            ribbon.transform.SetParent(go.transform, false);
+            ribbon.transform.localScale = size;
+            ribbon.GetComponent<Renderer>().sharedMaterial = ribbonMat;
+        }
     }
 
     // Decoration box: no collider, pushed back to z so it sits behind the play layer.

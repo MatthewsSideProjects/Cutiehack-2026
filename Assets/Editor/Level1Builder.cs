@@ -105,11 +105,11 @@ public static class Level1Builder
         AddCheckpoint(root, "Checkpoint 2", 27);
 
         // ---- Section 3: grow and push (tiles 28-41) ----
-        Add(root, "S3 block", 31, 32, 0, 1, "Floor", brown, look: Look.Platform);
+        AddPushable(root, "S3 stone", 31, 32, 0, 1, brown); // push (Big) into the trench to bridge it
         AddCheckpoint(root, "Checkpoint 3", 41);
 
         // ---- Section 4: block and ledge (tiles 42-55) ----
-        Add(root, "S4 block", 44, 45, 0, 1, "Floor", brown, look: Look.Platform);
+        AddPushable(root, "S4 stone", 44, 45, 0, 1, brown); // push (Big) to the pillar as a step
         Add(root, "S4 pillar", 49, 52, 0, 2, "Floor", gray, look: Look.Wall);
         AddItem(root, "Gloves", 50, 3, pink);
         AddCheckpoint(root, "Checkpoint 4", 55);
@@ -173,6 +173,14 @@ public static class Level1Builder
         }
 
         if (applied) cube.GetComponent<MeshRenderer>().enabled = false;
+    }
+
+    // A block only Big can push. No tiled sprite: those are separate objects and wouldn't move with it.
+    static void AddPushable(Transform root, string name, int x1, int x2, int y1, int y2, Material mat)
+    {
+        GameObject go = Add(root, name, x1, x2, y1, y2, "Floor", mat);
+        go.AddComponent<Rigidbody>().mass = 2f;
+        go.AddComponent<Pushable>();
     }
 
     static void AddSprite(Transform root, string name, Sprite sprite, float cx, float cy, float w, float h)

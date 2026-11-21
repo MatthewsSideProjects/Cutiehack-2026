@@ -15,6 +15,7 @@ public class ForkThrust : MonoBehaviour
     public float shakeAmount = 0.08f;
     public float peek = 0.06f; // how far out (0-1 of stab) the tips show while shaking
     [Range(0f, 1f)] public float phase;
+    public Vector3 blockCheckSize = new Vector3(1.2f, 1.2f, 0.6f); // area a box must cover to block it
 
     private Rigidbody rb;
     private Vector3 home;
@@ -45,8 +46,21 @@ public class ForkThrust : MonoBehaviour
         else if ((t -= holdTime) < 0f) out01 = 1f;
         else out01 = Mathf.SmoothStep(1f, 0f, 1f + (t - pullTime) / pullTime);
 
+        // A pushable block standing in front of the fork blocks it, so it stays in.
+        if (Blocked()) { out01 = 0f; jitter = Vector3.zero; }
+
         Vector3 local = home + stab * out01 + jitter;
         Vector3 world = transform.parent != null ? transform.parent.TransformPoint(local) : local;
         rb.MovePosition(world);
+    }
+
+    // Looks for a Pushable in the play plane (z = 0) right where the fork comes out.
+    private bool Blocked()
+    {
+        Vector3 spot = new Vector3(home.x, home.y, 0f);
+        if (transform.parent != null) spot = transform.parent.TransformPoint(spot);
+        foreach (Collider c in Physics.OverlapBox(spot, blockCheckSize / 2f))
+            if (c.GetComponentInParent<Pushable>() != null) return true;
+        return false;
     }
 }

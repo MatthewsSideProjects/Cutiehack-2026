@@ -33,12 +33,17 @@ public class BaseMovement : MonoBehaviour
     private List<CollectableScript> collectables = new List<CollectableScript>();
     private List<GameObject> collectableObjects = new List<GameObject>();
     private PlayerSize size = PlayerSize.Medium;
+    private Vector3 baseScale; // Regular-size scale and speed, restored on respawn
+    private float baseSpeed;
+    public PlayerSize Size => size;
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
         sprite = GetComponentInChildren<SpriteRenderer>();
         Physics.gravity = new Vector3(0, -1f * gravityMod, 0);
         currentRespawn = transform.position;
+        baseScale = transform.localScale;
+        baseSpeed = speed;
     }
     void Update()
     {
@@ -106,11 +111,13 @@ public class BaseMovement : MonoBehaviour
     }
     private void OnCollisionEnter(Collision other)
     {
-        if (other.gameObject.tag == "Floor" && transform.position.y > other.transform.position.y)
+        // other.collider, not other.gameObject: for parts of a moving object (fork tines) gameObject
+        // is the parent that owns the Rigidbody, which isn't tagged.
+        if (other.collider.CompareTag("Floor") && transform.position.y > other.transform.position.y)
         {
             canJump = true;
         }
-        if (other.gameObject.tag == "Obstacle")
+        if (other.collider.CompareTag("Obstacle"))
         {
             respawn(); // hazards send her back to the last lit lamp
         }
@@ -156,6 +163,11 @@ public class BaseMovement : MonoBehaviour
     }
     public void respawn()
     {
+        // Back to Regular size, and every pushable block back to its start, so nothing softlocks.
+        size = PlayerSize.Medium;
+        transform.localScale = baseScale;
+        speed = baseSpeed;
+        Pushable.ResetAll();
         rb.linearVelocity = Vector3.zero;
         rb.position = currentRespawn;
         transform.position = currentRespawn;
