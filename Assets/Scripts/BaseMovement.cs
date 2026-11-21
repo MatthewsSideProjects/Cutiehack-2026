@@ -3,7 +3,10 @@ using System;
 using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.UI;
+using UnityEditor.AssetImporters;
+using Unity.VisualScripting;
 public enum DeathType {Timeout, Obstacle}
+public enum PlayerSize {Small, Medium, Large}
 public class BaseMovement : MonoBehaviour
 {
     public float speed;
@@ -12,12 +15,15 @@ public class BaseMovement : MonoBehaviour
     public TimerScript timerScript;
     public GameObject startingCollectableObject;
     public float collectableDisplayOffset;
+    public float transformOffset;
+    public float speedNerf;
     private Rigidbody rb;
     private bool canJump;
     private bool canMove = true;
     private Vector3 currentRespawn;
     private List<CollectableScript> collectables = new List<CollectableScript>();
     private List<GameObject> collectableObjects = new List<GameObject>();
+    private PlayerSize size = PlayerSize.Medium;
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -36,6 +42,35 @@ public class BaseMovement : MonoBehaviour
         if (canMove && canJump && y > 0)
         {
             jump();
+        }
+        if (Input.GetKeyDown(KeyCode.Q) && size != PlayerSize.Small) 
+        {
+            transform.localScale /= 2;
+            if (size == PlayerSize.Medium)
+            {
+                speed -= speedNerf;
+                size = PlayerSize.Small;
+            }
+            if (size == PlayerSize.Large)
+            {
+                speed += speedNerf;
+                size = PlayerSize.Medium;
+            }
+        }
+        if (Input.GetKeyDown(KeyCode.E) && size != PlayerSize.Large)
+        {
+            transform.position = new Vector3(transform.position.x, transform.position.y + transformOffset, transform.position.z);
+            transform.localScale *= 2;
+            if (size == PlayerSize.Medium)
+            {
+                speed -= speedNerf;
+                size = PlayerSize.Large;
+            }
+            if (size == PlayerSize.Small)
+            {
+                speed += speedNerf;
+                size = PlayerSize.Medium;
+            }
         }
     }
     public void jump()
