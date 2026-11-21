@@ -1,5 +1,8 @@
+using NUnit.Framework;
 using System;
 using UnityEngine;
+using System.Collections.Generic;
+using UnityEngine.UI;
 public enum DeathType {Timeout, Obstacle}
 public class BaseMovement : MonoBehaviour
 {
@@ -7,10 +10,14 @@ public class BaseMovement : MonoBehaviour
     public float jumpForce;
     public float gravityMod;
     public TimerScript timerScript;
+    public GameObject startingCollectableObject;
+    public float collectableDisplayOffset;
     private Rigidbody rb;
     private bool canJump;
     private bool canMove = true;
     private Vector3 currentRespawn;
+    private List<CollectableScript> collectables = new List<CollectableScript>();
+    private List<GameObject> collectableObjects = new List<GameObject>();
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -63,5 +70,21 @@ public class BaseMovement : MonoBehaviour
     public void setRespawn(Vector3 respawn)
     {
         currentRespawn = respawn;
+    }
+    public void obtainCollectable(CollectableScript collectable)
+    {
+        collectables.Add(collectable);
+        updateCollectableDisplay();
+    }
+    public void updateCollectableDisplay()
+    {
+        //while (collectables.Count < collectableObjects.Count)
+        //{
+        //    Destroy(collectableObjectsBack());
+        //}
+    }
+    private GameObject collectableObjectsBack()
+    {
+        return collectableObjects[collectableObjects.Count - 1];
     }
 }
