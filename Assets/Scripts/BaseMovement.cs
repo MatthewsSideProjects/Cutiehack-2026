@@ -10,10 +10,12 @@ public class BaseMovement : MonoBehaviour
     private Rigidbody rb;
     private bool canJump;
     private bool canMove = true;
+    private Vector3 currentRespawn;
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
-        Physics.gravity = new Vector3(0, -1f *gravityMod, 0);
+        Physics.gravity = new Vector3(0, -1f * gravityMod, 0);
+        currentRespawn = transform.position;
     }
     void Update()
     {
@@ -40,10 +42,15 @@ public class BaseMovement : MonoBehaviour
         {
             canJump = true;
         }
+        if (other.gameObject.tag == "Obstacle")
+        {
+            endGame(DeathType.Obstacle);
+        }
     }
     public void endGame(DeathType deathType)
     {
         canMove = false;
+        rb.constraints = RigidbodyConstraints.FreezeAll;
         if (deathType == DeathType.Timeout)
         {
             // timeout cutscene or death
@@ -52,5 +59,9 @@ public class BaseMovement : MonoBehaviour
         {
             // death animation
         }
+    }
+    public void setRespawn(Vector3 respawn)
+    {
+        currentRespawn = respawn;
     }
 }

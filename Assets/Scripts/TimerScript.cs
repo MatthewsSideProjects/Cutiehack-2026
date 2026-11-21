@@ -47,6 +47,10 @@ public class TimerScript : MonoBehaviour
             text.SetText(minutes + ":" + fillerZero + seconds);
         }
     }
+    public void setTime(float t)
+    {
+        time = t;
+    }
     public void addTime(float amount)
     {
         if (time < 0)
@@ -58,5 +62,13 @@ public class TimerScript : MonoBehaviour
     public void subtractTime(float amount)
     {
         time -= amount;
+    }
+    public void stopTimer()
+    {
+        running = false;
+    }
+    public void continueTimer()
+    {
+        running = true;
     }
 }
