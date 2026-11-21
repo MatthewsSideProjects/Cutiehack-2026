@@ -754,7 +754,9 @@ MonoBehaviour:
   startingCollectableObject: {fileID: 1684409204}
   collectableDisplayOffset: 50
   transformOffset: 0.6
-  speedNerf: 0
+  speedScalar: 2
+  largeJumpScalar: 0.5
+  smallJumpScalar: 2
 --- !u!1 &1278517597
 GameObject:
   m_ObjectHideFlags: 0
@@ -870,7 +872,7 @@ MeshCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 5
   m_Convex: 0
   m_CookingOptions: 30
