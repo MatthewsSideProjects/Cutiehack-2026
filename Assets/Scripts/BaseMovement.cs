@@ -78,10 +78,18 @@ public class BaseMovement : MonoBehaviour
     }
     public void updateCollectableDisplay()
     {
-        //while (collectables.Count < collectableObjects.Count)
-        //{
-        //    Destroy(collectableObjectsBack());
-        //}
+        while (collectables.Count < collectableObjects.Count)
+        {
+            Destroy(collectableObjectsBack());
+            collectableObjects.RemoveAt(collectableObjects.Count - 1);
+        }
+        while (collectables.Count > collectableObjects.Count)
+        {
+            collectableObjects.Add(Instantiate<GameObject>(startingCollectableObject));
+            collectableObjectsBack().GetComponent<Image>().sprite = collectables[collectableObjects.Count - 1].displayImage;
+            collectableObjectsBack().transform.position = new Vector3(startingCollectableObject.transform.position.x + collectableDisplayOffset * collectableObjects.Count, startingCollectableObject.transform.position.y, startingCollectableObject.transform.position.z);
+            collectableObjectsBack().SetActive(true);
+        }
     }
     private GameObject collectableObjectsBack()
     {
