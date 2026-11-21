@@ -12,7 +12,9 @@ public class BaseMovement : MonoBehaviour
     public TimerScript timerScript;
     public GameObject startingCollectableObject;
     public float collectableDisplayOffset;
+    public bool spriteFacesLeft; // tick if the rabbit faces the wrong way when walking
     private Rigidbody rb;
+    private SpriteRenderer sprite;
     private bool canJump;
     private bool canMove = true;
     private Vector3 currentRespawn;
@@ -21,6 +23,7 @@ public class BaseMovement : MonoBehaviour
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
+        sprite = GetComponentInChildren<SpriteRenderer>();
         Physics.gravity = new Vector3(0, -1f * gravityMod, 0);
         currentRespawn = transform.position;
     }
@@ -32,6 +35,7 @@ public class BaseMovement : MonoBehaviour
         {
             Vector3 direction = new Vector3(x, 0f, 0f);
             transform.position += direction * speed * Time.deltaTime;
+            if (sprite != null && x != 0) sprite.flipX = (x < 0) != spriteFacesLeft;
         }
         if (canMove && canJump && y > 0)
         {
