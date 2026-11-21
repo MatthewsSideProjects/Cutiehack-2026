@@ -16,7 +16,9 @@ public class BaseMovement : MonoBehaviour
     public GameObject startingCollectableObject;
     public float collectableDisplayOffset;
     public float transformOffset;
-    public float speedNerf;
+    public float speedScalar;
+    public float largeJumpScalar;
+    public float smallJumpScalar;
     private Rigidbody rb;
     private bool canJump;
     private bool canMove = true;
@@ -48,12 +50,14 @@ public class BaseMovement : MonoBehaviour
             transform.localScale /= 2;
             if (size == PlayerSize.Medium)
             {
-                speed -= speedNerf;
+                speed /= speedScalar;
+                jumpForce /= smallJumpScalar;
                 size = PlayerSize.Small;
             }
             if (size == PlayerSize.Large)
             {
-                speed += speedNerf;
+                speed *= speedScalar;
+                jumpForce /= largeJumpScalar;
                 size = PlayerSize.Medium;
             }
         }
@@ -63,12 +67,14 @@ public class BaseMovement : MonoBehaviour
             transform.localScale *= 2;
             if (size == PlayerSize.Medium)
             {
-                speed -= speedNerf;
+                speed /= speedScalar;
+                jumpForce *= largeJumpScalar;
                 size = PlayerSize.Large;
             }
             if (size == PlayerSize.Small)
             {
-                speed += speedNerf;
+                speed *= speedScalar;
+                jumpForce *= smallJumpScalar;
                 size = PlayerSize.Medium;
             }
         }
