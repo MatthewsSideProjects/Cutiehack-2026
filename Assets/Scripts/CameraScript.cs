@@ -15,6 +15,16 @@ public class CameraScript : MonoBehaviour
     // so normal jumps don't bob the view but climbing the cake scrolls it.
     public float aboveMargin = 3f;
     public float belowMargin = 2f;
+    // Bottom of the 3-block ground in Levels 1 and 2: the view's bottom edge never dips below it.
+    public float groundBottom = -3f;
+    // Outer edges of the green hedges at the ends of Level 1: the view never goes past them.
+    public float level1Left = -2f;
+    public float level1Right = 72f;
+    // Level 2's ends (it's built at x 1000, floor runs to local x 142).
+    public float level2Left = 1000f;
+    public float level2Right = 1142f;
+    // Level 1's flat (orthographic) view: half the view height in units.
+    public float viewHalfHeight = 6f;
 
     [Header("Level 3")]
     public float level3Length = 165f;   // x from the start of Level 3 to its door, for "towards the end"
@@ -22,7 +32,9 @@ public class CameraScript : MonoBehaviour
     public float closeZoomEnd = 0.6f;   // ... and at the door
     public float maxShake = 0.25f;      // units of shake at the door
 
+    public static bool Calm; // the finale: no shake while the world spirals into the door
     private float minY, baseY, baseZ;
+    private Camera cam;
     private Light sun;
     private float sunIntensity;
     private Color sunColor;
@@ -33,6 +45,7 @@ public class CameraScript : MonoBehaviour
     private ChromaticAberration fringe;
     private Bloom bloom;
     private SpriteRenderer[] beams;
+    private float calmW;
     private float w1 = 1f, w2, w3; // how much each level's mood is on, 0..1
 
     void Start()
@@ -51,7 +64,8 @@ public class CameraScript : MonoBehaviour
         lantern.range = 7f;
         lantern.intensity = 0f;
 
-        GetComponent<Camera>().GetUniversalAdditionalCameraData().renderPostProcessing = true;
+        cam = GetComponent<Camera>();
+        cam.GetUniversalAdditionalCameraData().renderPostProcessing = true;
         Volume v = gameObject.AddComponent<Volume>();
         v.isGlobal = true;
         v.priority = 10f;
@@ -107,6 +121,7 @@ public class CameraScript : MonoBehaviour
         float k = 1f - Mathf.Exp(-2f * Time.deltaTime);
         w1 = Mathf.Lerp(w1, p.x < 1000f ? 1f : 0f, k);
         w2 = Mathf.Lerp(w2, p.x >= 1000f && p.x < 2000f ? 1f : 0f, k);
+        calmW = Mathf.Lerp(calmW, Calm ? 1f : 0f, k); // the dark lifts so the door shines
         w3 = Mathf.Lerp(w3, p.x >= 2000f ? 1f : 0f, k);
         float progress = Mathf.Clamp01((p.x - 2000f) / level3Length); // 0 at the start of Level 3, 1 at its door
         float near = 0f; // 1 when the darkness is on her heels
@@ -124,10 +139,10 @@ public class CameraScript : MonoBehaviour
         lantern.intensity = w3 * (2.2f - 0.8f * progress) * (0.92f + 0.08f * Mathf.PerlinNoise(t * 6f, 0f)); // flickers, dims near the end
 
         // Post effects
-        color.postExposure.Override(0.35f * w1 - 1.1f * w3 - 0.4f * w3 * progress);
+        color.postExposure.Override((0.35f * w1 - 1.1f * w3 - 0.4f * w3 * progress) * (1f - calmW));
         color.saturation.Override(18f * w1 + 12f * w2 - 55f * w3);
         color.colorFilter.Override(Color.Lerp(Color.Lerp(Color.white, new Color(1f, 0.96f, 0.86f), w1), new Color(1f, 0.9f, 0.95f), w2));
-        bloom.intensity.Override(0.8f * w1 + 0.3f * w2);
+        bloom.intensity.Override(0.8f * w1 + 0.3f * w2 + 1.5f * calmW);
         bloom.threshold.Override(0.85f);
         for (int i = 0; i < beams.Length; i++) // each shaft breathes slowly, like leaves moving across the sun
             beams[i].color = new Color(1f, 1f, 1f, w1 * (0.06f + 0.05f * Mathf.Sin(t * 0.6f + i * 1.9f)));
@@ -138,8 +153,23 @@ public class CameraScript : MonoBehaviour
 
         // Closer and shakier through Level 3
         float zoom = Mathf.Lerp(1f, Mathf.Lerp(closeZoomStart, closeZoomEnd, progress), w3);
-        float shake = w3 * maxShake * (progress * progress + 0.6f * near);
+        float shake = Calm ? 0f : w3 * maxShake * (progress * progress + 0.6f * near);
         Vector2 jitter = shake * new Vector2(Mathf.PerlinNoise(t * 18f, 1f) - 0.5f, Mathf.PerlinNoise(1f, t * 18f) - 0.5f) * 2f;
-        transform.position = new Vector3(p.x + jitter.x, baseY + jitter.y, baseZ * zoom);
+        // Level 1: flat (orthographic) view. Levels 2 and 3: the original perspective camera.
+        // Levels 1 and 2 keep the view between their ends and above the ground; Level 3 is unclamped.
+        cam.orthographic = p.x < 1000f;
+        float z = baseZ * zoom;
+        float halfH = cam.orthographic
+            ? (cam.orthographicSize = viewHalfHeight)
+            : -z * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad); // half the view height at the play layer (z 0)
+        float halfW = halfH * cam.aspect;
+        float x = p.x + jitter.x, y = baseY + jitter.y;
+        if (p.x < 2000f)
+        {
+            bool l1 = p.x < 1000f;
+            x = Mathf.Clamp(x, (l1 ? level1Left : level2Left) + halfW, (l1 ? level1Right : level2Right) - halfW);
+            y = Mathf.Max(y, groundBottom + halfH);
+        }
+        transform.position = new Vector3(x, y, z);
     }
 }
