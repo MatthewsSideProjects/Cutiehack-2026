@@ -22,6 +22,7 @@ public class CameraScript : MonoBehaviour
     public float closeZoomEnd = 0.6f;   // ... and at the door
     public float maxShake = 0.25f;      // units of shake at the door
 
+    public static bool Calm; // the finale: no shake while the world spirals into the door
     private float minY, baseY, baseZ;
     private Light sun;
     private float sunIntensity;
@@ -33,6 +34,7 @@ public class CameraScript : MonoBehaviour
     private ChromaticAberration fringe;
     private Bloom bloom;
     private SpriteRenderer[] beams;
+    private float calmW;
     private float w1 = 1f, w2, w3; // how much each level's mood is on, 0..1
 
     void Start()
@@ -107,6 +109,7 @@ public class CameraScript : MonoBehaviour
         float k = 1f - Mathf.Exp(-2f * Time.deltaTime);
         w1 = Mathf.Lerp(w1, p.x < 1000f ? 1f : 0f, k);
         w2 = Mathf.Lerp(w2, p.x >= 1000f && p.x < 2000f ? 1f : 0f, k);
+        calmW = Mathf.Lerp(calmW, Calm ? 1f : 0f, k); // the dark lifts so the door shines
         w3 = Mathf.Lerp(w3, p.x >= 2000f ? 1f : 0f, k);
         float progress = Mathf.Clamp01((p.x - 2000f) / level3Length); // 0 at the start of Level 3, 1 at its door
         float near = 0f; // 1 when the darkness is on her heels
@@ -124,10 +127,10 @@ public class CameraScript : MonoBehaviour
         lantern.intensity = w3 * (2.2f - 0.8f * progress) * (0.92f + 0.08f * Mathf.PerlinNoise(t * 6f, 0f)); // flickers, dims near the end
 
         // Post effects
-        color.postExposure.Override(0.35f * w1 - 1.1f * w3 - 0.4f * w3 * progress);
+        color.postExposure.Override((0.35f * w1 - 1.1f * w3 - 0.4f * w3 * progress) * (1f - calmW));
         color.saturation.Override(18f * w1 + 12f * w2 - 55f * w3);
         color.colorFilter.Override(Color.Lerp(Color.Lerp(Color.white, new Color(1f, 0.96f, 0.86f), w1), new Color(1f, 0.9f, 0.95f), w2));
-        bloom.intensity.Override(0.8f * w1 + 0.3f * w2);
+        bloom.intensity.Override(0.8f * w1 + 0.3f * w2 + 1.5f * calmW);
         bloom.threshold.Override(0.85f);
         for (int i = 0; i < beams.Length; i++) // each shaft breathes slowly, like leaves moving across the sun
             beams[i].color = new Color(1f, 1f, 1f, w1 * (0.06f + 0.05f * Mathf.Sin(t * 0.6f + i * 1.9f)));
@@ -138,7 +141,7 @@ public class CameraScript : MonoBehaviour
 
         // Closer and shakier through Level 3
         float zoom = Mathf.Lerp(1f, Mathf.Lerp(closeZoomStart, closeZoomEnd, progress), w3);
-        float shake = w3 * maxShake * (progress * progress + 0.6f * near);
+        float shake = Calm ? 0f : w3 * maxShake * (progress * progress + 0.6f * near);
         Vector2 jitter = shake * new Vector2(Mathf.PerlinNoise(t * 18f, 1f) - 0.5f, Mathf.PerlinNoise(1f, t * 18f) - 0.5f) * 2f;
         transform.position = new Vector3(p.x + jitter.x, baseY + jitter.y, baseZ * zoom);
     }
