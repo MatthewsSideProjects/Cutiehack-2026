@@ -110,6 +110,12 @@ public static class Level3Builder
         Solid(root, "Final step", 144, 150, 0f, 2f, floorMat); // jump off this: 8 wide, a little drop on the far side
         DoorScript door = Level1Builder.AddDoor(root, "Door", 164, null);
         door.itemsNeeded = 2;
+        door.nextScene = "Ending"; // the world folds into the door, then the sunrise bedroom
+        GameObject leap = new GameObject("Final leap (slow motion)");
+        leap.transform.SetParent(root, false);
+        leap.transform.localPosition = new Vector3(154f, 4.25f, 0f);
+        leap.AddComponent<BoxCollider>().size = new Vector3(8f, 7.5f, 2f); // the air over the final gap
+        leap.AddComponent<FinalLeap>();
         Deco(root, "Door glow", 164.5f, 1.6f, 2.6f, 3.4f, 0.6f, 0f, warmMat);
 
         // ---- The wall ----

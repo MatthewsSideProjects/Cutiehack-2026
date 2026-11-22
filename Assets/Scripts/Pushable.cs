@@ -12,6 +12,7 @@ public class Pushable : MonoBehaviour
     private Rigidbody rb;
     private Vector3 start;
     private BaseMovement player;
+    private bool pushed; // she touched it during the last physics step
 
     private void Awake()
     {
@@ -36,6 +37,14 @@ public class Pushable : MonoBehaviour
         bool canPush = player != null && player.Size == PlayerSize.Large;
         RigidbodyConstraints locked = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionZ;
         rb.constraints = canPush ? locked : locked | RigidbodyConstraints.FreezePositionX;
+        // No ice: the moment she stops pushing, it stops. Without this it kept her momentum and slid into pits.
+        if (!pushed) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+        pushed = false;
+    }
+
+    private void OnCollisionStay(Collision other)
+    {
+        if (player != null && other.gameObject == player.gameObject) pushed = true;
     }
 
     // Puts back only the blocks that start ahead of where she respawns: those belong to the section

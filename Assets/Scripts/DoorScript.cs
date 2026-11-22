@@ -1,6 +1,8 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+using System.Collections.Generic;
 
 // End-of-level door. When the player walks in: the door opens, she shrinks into the light,
 // the screen fades to white, she is moved to `destination` (the next level, far away in the
@@ -8,6 +10,8 @@ using UnityEngine.UI;
 public class DoorScript : MonoBehaviour
 {
     public Transform destination;       // where she appears in the next level
+    public string nextScene;            // set on the last door: the world collapses into it, then this scene loads
+    public float collapseTime = 2.8f;
     public int itemsNeeded = 0;         // memory items from this level she must carry before it opens
     public Sprite closedSprite;
     public Sprite openSprite;
@@ -73,6 +77,11 @@ public class DoorScript : MonoBehaviour
             if (explain) Debug.Log("The door is locked. Items: " + player.ItemsIn(transform.root) + "/" + itemsNeeded);
             return;
         }
+        if (!string.IsNullOrEmpty(nextScene))
+        {
+            StartCoroutine(Collapse(player));
+            return;
+        }
         if (destination == null)
         {
             if (explain) Debug.LogError("Door has no Destination set.");
@@ -128,6 +137,68 @@ public class DoorScript : MonoBehaviour
         }
         Destroy(fade.canvas.gameObject);
         entering = false;
+    }
+
+    // The finale: she steps through, the whole house folds and spins into the open door,
+    // the doorway flares warm white, and the ending scene loads.
+    private IEnumerator Collapse(BaseMovement player)
+    {
+        entering = true;
+        FinalLeap.Set(1f);
+        player.lockControls();
+        if (sprite != null && openSprite != null) sprite.sprite = openSprite;
+        foreach (CreepingWall w in FindObjectsByType<CreepingWall>(FindObjectsSortMode.None)) w.enabled = false;
+        yield return new WaitForSeconds(openPause);
+
+        // She walks into the light first.
+        Transform p = player.transform;
+        SpriteRenderer playerSprite = player.GetComponentInChildren<SpriteRenderer>();
+        Vector3 startPos = p.position, startScale = p.localScale;
+        Vector3 endPos = new Vector3(transform.position.x, startPos.y, transform.position.z + 0.1f);
+        for (float t = 0f; t < 1f; t += Time.deltaTime / walkInTime)
+        {
+            float e = t * t * (3f - 2f * t);
+            p.position = Vector3.Lerp(startPos, endPos, e);
+            p.localScale = Vector3.Lerp(startScale, startScale * 0.2f, e);
+            if (playerSprite != null) playerSprite.color = new Color(1f, 1f, 1f, 1f - e);
+            yield return null;
+        }
+
+        // Everything nearby that is drawn (rooms, boxes, the darkness) gets pulled in.
+        Vector3 c = transform.position;
+        List<Transform> parts = new List<Transform>();
+        foreach (Renderer r in FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+        {
+            Transform t = r.transform;
+            if (t == transform || t.IsChildOf(transform) || t.IsChildOf(p) || parts.Contains(t)) continue;
+            if (Mathf.Abs(t.position.x - c.x) > 45f) continue;
+            if (r.TryGetComponent(out Rigidbody rb)) rb.isKinematic = true;
+            if (r.TryGetComponent(out Collider col)) col.enabled = false;
+            parts.Add(t);
+        }
+        Vector3[] pos0 = new Vector3[parts.Count], scale0 = new Vector3[parts.Count]; Quaternion[] rot0 = new Quaternion[parts.Count];
+        for (int i = 0; i < parts.Count; i++) { pos0[i] = parts[i].position; scale0[i] = parts[i].localScale; rot0[i] = parts[i].rotation; }
+
+        Image fade = MakeFade();
+        for (float t = 0f; t < 1f; t += Time.deltaTime / collapseTime)
+        {
+            float e = t * t * t; // slow start, then everything rushes in
+            Quaternion spin = Quaternion.Euler(0f, 0f, 540f * e);
+            for (int i = 0; i < parts.Count; i++)
+            {
+                if (parts[i] == null) continue;
+                Vector3 off = pos0[i] - c;
+                off.z = 0f;
+                parts[i].position = c + spin * off * (1f - e) + new Vector3(0f, 0f, pos0[i].z);
+                parts[i].localScale = scale0[i] * (1f - e);
+                parts[i].rotation = spin * rot0[i];
+            }
+            fade.color = new Color(1f, 0.93f, 0.82f, Mathf.Clamp01((t - 0.6f) / 0.4f)); // warm sunrise white
+            yield return null;
+        }
+        fade.color = new Color(1f, 0.93f, 0.82f, 1f);
+        yield return new WaitForSeconds(0.4f);
+        SceneManager.LoadScene(nextScene);
     }
 
     private static Image MakeFade()
