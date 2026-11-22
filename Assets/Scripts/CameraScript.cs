@@ -45,12 +45,18 @@ public class CameraScript : MonoBehaviour
     private ChromaticAberration fringe;
     private Bloom bloom;
     private SpriteRenderer[] beams;
+    [Header("Music")]
+    public float level1MusicVolume = 0.4f; // Assets/Resources/gardenAudio.mp3, kept low
+    public float level2MusicVolume = 0.6f; // Assets/Resources/bitCrushAudio.mp3, a bit under full
+    public float level3MusicVolume = 0.4f; // Assets/Resources/level3Audio.mp3, kept low
+    private AudioSource level1Music, level2Music, level3Music;
     private float calmW;
     private float w1 = 1f, w2, w3; // how much each level's mood is on, 0..1
 
     void Start()
     {
         if (player == null) player = GameObject.FindWithTag("Player");
+        Calm = false; // left on by the last door when the game is played again
         minY = baseY = transform.position.y; // never look lower than the starting view
         baseZ = transform.position.z;
 
@@ -77,6 +83,26 @@ public class CameraScript : MonoBehaviour
         fringe = profile.Add<ChromaticAberration>(true);
         bloom = profile.Add<Bloom>(true);
         beams = MakeSunBeams();
+        level1Music = MakeMusic("gardenAudio");
+        level2Music = MakeMusic("bitCrushAudio");
+        level3Music = MakeMusic("level3Audio");
+    }
+
+    AudioSource MakeMusic(string clip)
+    {
+        AudioSource a = gameObject.AddComponent<AudioSource>();
+        a.clip = Resources.Load<AudioClip>(clip);
+        a.loop = true;
+        a.playOnAwake = false;
+        a.volume = 0f;
+        return a;
+    }
+
+    static void Fade(AudioSource a, float volume)
+    {
+        a.volume = volume;
+        if (volume > 0.01f && !a.isPlaying && a.clip != null) a.Play();
+        else if (volume <= 0.01f && a.isPlaying) a.Stop();
     }
 
     // Long soft diagonal stripes of light, fixed to the camera: sun pouring through the leaves.
@@ -123,6 +149,11 @@ public class CameraScript : MonoBehaviour
         w2 = Mathf.Lerp(w2, p.x >= 1000f && p.x < 2000f ? 1f : 0f, k);
         calmW = Mathf.Lerp(calmW, Calm ? 1f : 0f, k); // the dark lifts so the door shines
         w3 = Mathf.Lerp(w3, p.x >= 2000f ? 1f : 0f, k);
+
+        // Each level's music fades in with its mood and out again when she leaves it.
+        Fade(level1Music, level1MusicVolume * w1);
+        Fade(level2Music, level2MusicVolume * w2);
+        Fade(level3Music, level3MusicVolume * w3);
         float progress = Mathf.Clamp01((p.x - 2000f) / level3Length); // 0 at the start of Level 3, 1 at its door
         float near = 0f; // 1 when the darkness is on her heels
         CreepingWall dark = CreepingWall.Active;
