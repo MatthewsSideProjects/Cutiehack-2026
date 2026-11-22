@@ -243,6 +243,72 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerScript: {fileID: 1244302778}
+  offSprite: {fileID: 0}
+  onSprite: {fileID: 0}
+--- !u!1 &43839511
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 43839513}
+  - component: {fileID: 43839512}
+  - component: {fileID: 43839514}
+  m_Layer: 0
+  m_Name: Global Volume
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &43839512
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 43839511}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_IsGlobal: 1
+  priority: 0
+  blendDistance: 0
+  weight: 1
+  sharedProfile: {fileID: 11400000, guid: 41f738c4e9ed7524cabe4f5baf1a195c, type: 2}
+--- !u!4 &43839513
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 43839511}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &43839514
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 43839511}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb72ede46e992bb40a17241c03ad5897, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  duration: 10
+  lighting: {fileID: 376862602}
 --- !u!1 &241158262
 GameObject:
   m_ObjectHideFlags: 0
@@ -753,8 +819,16 @@ MonoBehaviour:
   timerScript: {fileID: 2023827900}
   startingCollectableObject: {fileID: 1684409204}
   collectableDisplayOffset: 50
+  spriteFacesLeft: 0
+  idleFrames: []
+  runFrames: []
+  idleFps: 6
+  runFps: 10
+  fallLimit: -8
   transformOffset: 0.6
-  speedNerf: 0
+  speedScalar: 2
+  largeJumpScalar: 0.5
+  smallJumpScalar: 2
 --- !u!1 &1278517597
 GameObject:
   m_ObjectHideFlags: 0
@@ -870,7 +944,7 @@ MeshCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 5
   m_Convex: 0
   m_CookingOptions: 30
@@ -1135,7 +1209,7 @@ MonoBehaviour:
     m_Bits: 1
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
+  m_RenderPostProcessing: 1
   m_Antialiasing: 0
   m_AntialiasingQuality: 2
   m_StopNaN: 0
@@ -1169,6 +1243,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   player: {fileID: 1244302772}
+  aboveMargin: 3
+  belowMargin: 2
+  level3Length: 165
+  closeZoomStart: 0.8
+  closeZoomEnd: 0.6
+  maxShake: 0.25
 --- !u!1 &1784534456
 GameObject:
   m_ObjectHideFlags: 0
@@ -1443,8 +1523,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 323658377221088489d5396486050e99, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  startTime: 30
+  startTime: 15
   playerScript: {fileID: 1244302778}
+  blurScript: {fileID: 43839514}
 --- !u!114 &2023827901
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1683,3 +1764,4 @@ SceneRoots:
   - {fileID: 252126231}
   - {fileID: 2119138958}
   - {fileID: 1713331552}
+  - {fileID: 43839513}

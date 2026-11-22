@@ -5,6 +5,7 @@ public class TimerScript : MonoBehaviour
 {
     public float startTime;
     public BaseMovement playerScript;
+    public BlurEffectScript blurScript;
     private float time;
     private bool running = true;
     private TextMeshProUGUI text;
@@ -26,6 +27,14 @@ public class TimerScript : MonoBehaviour
             running = false;
             Debug.Log("Dream timer ran out: player frozen (endGame Timeout). Raise Start Time on the Timer Text to play longer.");
             playerScript.endGame(DeathType.Timeout);
+        }
+        if (time < 10)
+        {
+            blurScript.setFade(fadeState.Dark);
+        }
+        else
+        {
+            blurScript.setFade(fadeState.Light);
         }
     }
     private void displayTime()

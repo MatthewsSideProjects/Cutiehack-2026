@@ -30,7 +30,9 @@ public class BaseMovement : MonoBehaviour
     private float animTime;
     private bool wasRunning;
     public float transformOffset;
-    public float speedNerf;
+    public float speedScalar;
+    public float largeJumpScalar;
+    public float smallJumpScalar;
     private Rigidbody rb;
     private SpriteRenderer sprite;
     private bool canJump;
@@ -40,7 +42,7 @@ public class BaseMovement : MonoBehaviour
     private List<GameObject> collectableObjects = new List<GameObject>();
     private PlayerSize size = PlayerSize.Medium;
     private Vector3 baseScale; // Regular-size scale and speed, restored on respawn
-    private float baseSpeed;
+    private float baseSpeed, baseJump;
     public PlayerSize Size => size;
     private void Start()
     {
@@ -50,6 +52,7 @@ public class BaseMovement : MonoBehaviour
         currentRespawn = transform.position;
         baseScale = transform.localScale;
         baseSpeed = speed;
+        baseJump = jumpForce;
         if (deathFrames == null || deathFrames.Length == 0) // not set in the Inspector: use Assets/Resources/RabbitDeath
         {
             deathFrames = Resources.LoadAll<Sprite>("RabbitDeath");
@@ -80,12 +83,14 @@ public class BaseMovement : MonoBehaviour
             transform.localScale /= 2;
             if (size == PlayerSize.Medium)
             {
-                speed -= speedNerf;
+                speed /= speedScalar;
+                jumpForce /= smallJumpScalar;
                 size = PlayerSize.Small;
             }
             if (size == PlayerSize.Large)
             {
-                speed += speedNerf;
+                speed *= speedScalar;
+                jumpForce /= largeJumpScalar;
                 size = PlayerSize.Medium;
             }
         }
@@ -95,12 +100,14 @@ public class BaseMovement : MonoBehaviour
             transform.localScale *= 2;
             if (size == PlayerSize.Medium)
             {
-                speed -= speedNerf;
+                speed /= speedScalar;
+                jumpForce *= largeJumpScalar;
                 size = PlayerSize.Large;
             }
             if (size == PlayerSize.Small)
             {
-                speed += speedNerf;
+                speed *= speedScalar;
+                jumpForce *= smallJumpScalar;
                 size = PlayerSize.Medium;
             }
         }
@@ -204,6 +211,7 @@ public class BaseMovement : MonoBehaviour
         size = PlayerSize.Medium;
         transform.localScale = baseScale;
         speed = baseSpeed;
+        jumpForce = baseJump;
         Pushable.ResetAhead(currentRespawn.x);
         rb.linearVelocity = Vector3.zero;
         rb.position = currentRespawn;
