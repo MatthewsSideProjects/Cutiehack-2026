@@ -17,9 +17,15 @@ public class BaseMovement : MonoBehaviour
     public bool spriteFacesLeft; // tick if the rabbit faces the wrong way when running
     public Sprite[] idleFrames;
     public Sprite[] runFrames;
+    public Sprite[] deathFrames;
+    public float deathFps = 8f;
+    public float deathHold = 0.6f; // seconds on the last death frame before she respawns
+    private bool dying;
     public float idleFps = 6f;
     public float runFps = 10f;
-    public float fallLimit = -8f; // below this y she counts as fallen into a pit
+    // Below this y she counts as fallen into a pit: just under the floors, while she's still on screen,
+    // so the death animation shows. (The deepest floor, Level 1's trench, has her at about y -1.2.)
+    public float pitDeathY = -2.5f;
     private MovingPlate plate; // the moving plate she is standing on, if any
     private float animTime;
     private bool wasRunning;
@@ -44,12 +50,17 @@ public class BaseMovement : MonoBehaviour
         currentRespawn = transform.position;
         baseScale = transform.localScale;
         baseSpeed = speed;
+        if (deathFrames == null || deathFrames.Length == 0) // not set in the Inspector: use Assets/Resources/RabbitDeath
+        {
+            deathFrames = Resources.LoadAll<Sprite>("RabbitDeath");
+            Array.Sort(deathFrames, (a, b) => string.CompareOrdinal(a.name, b.name));
+        }
     }
     void Update()
     {
         float x = Input.GetAxisRaw("Horizontal");
         float y = Input.GetAxisRaw("Vertical");
-        if (canMove && transform.position.y < fallLimit) respawn(); // fell into a pit
+        if (canMove && transform.position.y < pitDeathY) die(); // fell into a pit
         if (canMove)
         {
             // Move through the Rigidbody so walls and ceilings block her.
@@ -59,7 +70,7 @@ public class BaseMovement : MonoBehaviour
             rb.linearVelocity = new Vector3(x * speed + carry, rb.linearVelocity.y, 0f);
             if (sprite != null && x != 0) sprite.flipX = (x < 0) != spriteFacesLeft;
         }
-        animate(canMove && x != 0f);
+        if (!dying) animate(canMove && x != 0f);
         if (canMove && canJump && y > 0)
         {
             jump();
@@ -119,7 +130,7 @@ public class BaseMovement : MonoBehaviour
         }
         if (other.collider.CompareTag("Obstacle"))
         {
-            respawn(); // hazards send her back to the last lit lamp
+            die(); // hazards send her back to the last lit lamp
         }
     }
     private void OnCollisionStay(Collision other)
@@ -162,6 +173,30 @@ public class BaseMovement : MonoBehaviour
     {
         rb.isKinematic = false;
         canMove = true;
+    }
+    // Death: freeze, play the death frames, then back to the last lit lamp.
+    public void die()
+    {
+        if (dying) return;
+        StartCoroutine(DeathRoutine());
+    }
+    private System.Collections.IEnumerator DeathRoutine()
+    {
+        dying = true;
+        lockControls();
+        // In a pit, lift her so the whole body sits above the bottom of the ground (y -3), inside the camera's view.
+        if (sprite != null && sprite.bounds.min.y < -3f)
+            transform.position += Vector3.up * (-3f - sprite.bounds.min.y);
+        if (sprite != null && deathFrames != null)
+            foreach (Sprite f in deathFrames)
+            {
+                sprite.sprite = f;
+                yield return new WaitForSeconds(1f / deathFps);
+            }
+        yield return new WaitForSeconds(deathHold);
+        unlockControls(); // before respawn: a kinematic body can't have its velocity set
+        respawn();
+        dying = false;
     }
     public void respawn()
     {

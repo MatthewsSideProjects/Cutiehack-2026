@@ -315,9 +315,25 @@ public static class Level1Builder
         Deco(root, PrimitiveType.Sphere, new Vector3(x, height, z - 0.05f), new Vector3(0.5f * size, 0.5f * size, 0.1f), 0f, pollenGold);
     }
 
-    // Big flowers behind the path and pollen drifting over the whole garden. No background: that's custom art.
+    // Big flowers behind the path and pollen drifting over the whole garden, in front of the painted backdrop.
     static void Dressing(Transform root)
     {
+        // Painted garden (Assets/Art/level_1_frame.jpg) behind the path, repeated sideways between the
+        // end hedges (x -2 to 72). The camera is flat (orthographic), so no perspective maths: 16 units tall,
+        // and the planters' bottom (72% down the picture) sits on the floor top at y 0, so centre y = 3.5.
+        Sprite backdrop = LoadSprite("Assets/Art/level_1_frame.jpg", 768f / 16f);
+        if (backdrop != null)
+        {
+            GameObject bg = new GameObject("Backdrop");
+            bg.transform.SetParent(root, false);
+            bg.transform.localPosition = new Vector3(35f, 0.71875f * 16f - 8f, 15f);
+            SpriteRenderer bsr = bg.AddComponent<SpriteRenderer>();
+            bsr.sprite = backdrop;
+            bsr.drawMode = SpriteDrawMode.Tiled;
+            bsr.size = new Vector2(74f, 16f);
+            bsr.sortingOrder = -100;
+        }
+
         Flower(root, 6f, 3.5f, 1.3f, 1.6f, peach);
         Flower(root, 11.5f, 5f, 1.6f, 2.2f, rose);
         Flower(root, 21f, 2.5f, 0.9f, 1.2f, cream);
