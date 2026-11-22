@@ -43,6 +43,7 @@ public class BaseMovement : MonoBehaviour
     private PlayerSize size = PlayerSize.Medium;
     private Vector3 baseScale; // Regular-size scale and speed, restored on respawn
     private float baseSpeed, baseJump;
+    private PlayerSize maxSize = PlayerSize.Large;
     public PlayerSize Size => size;
     private void Start()
     {
@@ -96,19 +97,21 @@ public class BaseMovement : MonoBehaviour
         }
         if (canMove && Input.GetKeyDown(KeyCode.E) && size != PlayerSize.Large)
         {
-            transform.position = new Vector3(transform.position.x, transform.position.y + transformOffset, transform.position.z);
-            transform.localScale *= 2;
-            if (size == PlayerSize.Medium)
+            if (size == PlayerSize.Medium && maxSize == PlayerSize.Large)
             {
                 speed /= speedScalar;
                 jumpForce *= largeJumpScalar;
                 size = PlayerSize.Large;
+                transform.position = new Vector3(transform.position.x, transform.position.y + transformOffset, transform.position.z);
+                transform.localScale *= 2;
             }
-            if (size == PlayerSize.Small)
+            if (size == PlayerSize.Small && maxSize != PlayerSize.Small)
             {
                 speed *= speedScalar;
                 jumpForce *= smallJumpScalar;
                 size = PlayerSize.Medium;
+                transform.position = new Vector3(transform.position.x, transform.position.y + transformOffset, transform.position.z);
+                transform.localScale *= 2;
             }
         }
     }
@@ -242,5 +245,9 @@ public class BaseMovement : MonoBehaviour
     private GameObject collectableObjectsBack()
     {
         return collectableObjects[collectableObjects.Count - 1];
+    }
+    public void setMaxSize(PlayerSize max)
+    {
+        maxSize = max;
     }
 }
