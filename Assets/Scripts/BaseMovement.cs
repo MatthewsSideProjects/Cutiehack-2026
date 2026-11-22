@@ -3,7 +3,6 @@ using System;
 using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.UI;
-using UnityEditor.AssetImporters;
 using Unity.VisualScripting;
 public enum DeathType {Timeout, Obstacle}
 public enum PlayerSize {Small, Medium, Large}
@@ -15,37 +14,59 @@ public class BaseMovement : MonoBehaviour
     public TimerScript timerScript;
     public GameObject startingCollectableObject;
     public float collectableDisplayOffset;
+    public bool spriteFacesLeft; // tick if the rabbit faces the wrong way when running
+    public Sprite[] idleFrames;
+    public Sprite[] runFrames;
+    public float idleFps = 6f;
+    public float runFps = 10f;
+    public float fallLimit = -8f; // below this y she counts as fallen into a pit
+    private MovingPlate plate; // the moving plate she is standing on, if any
+    private float animTime;
+    private bool wasRunning;
     public float transformOffset;
     public float speedScalar;
     public float largeJumpScalar;
     public float smallJumpScalar;
     private Rigidbody rb;
+    private SpriteRenderer sprite;
     private bool canJump;
     private bool canMove = true;
     private Vector3 currentRespawn;
     private List<CollectableScript> collectables = new List<CollectableScript>();
     private List<GameObject> collectableObjects = new List<GameObject>();
     private PlayerSize size = PlayerSize.Medium;
+    private Vector3 baseScale; // Regular-size scale and speed, restored on respawn
+    private float baseSpeed;
+    public PlayerSize Size => size;
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
+        sprite = GetComponentInChildren<SpriteRenderer>();
         Physics.gravity = new Vector3(0, -1f * gravityMod, 0);
         currentRespawn = transform.position;
+        baseScale = transform.localScale;
+        baseSpeed = speed;
     }
     void Update()
     {
         float x = Input.GetAxisRaw("Horizontal");
         float y = Input.GetAxisRaw("Vertical");
+        if (canMove && transform.position.y < fallLimit) respawn(); // fell into a pit
         if (canMove)
         {
-            Vector3 direction = new Vector3(x, 0f, 0f);
-            transform.position += direction * speed * Time.deltaTime;
+            // Move through the Rigidbody so walls and ceilings block her.
+            // Setting transform.position teleported her into colliders and she squeezed through gaps.
+            // On a moving plate, add its sideways speed so she rides along.
+            float carry = plate != null ? plate.Velocity.x : 0f;
+            rb.linearVelocity = new Vector3(x * speed + carry, rb.linearVelocity.y, 0f);
+            if (sprite != null && x != 0) sprite.flipX = (x < 0) != spriteFacesLeft;
         }
+        animate(canMove && x != 0f);
         if (canMove && canJump && y > 0)
         {
             jump();
         }
-        if (Input.GetKeyDown(KeyCode.Q) && size != PlayerSize.Small) 
+        if (canMove && Input.GetKeyDown(KeyCode.Q) && size != PlayerSize.Small) 
         {
             transform.localScale /= 2;
             if (size == PlayerSize.Medium)
@@ -61,7 +82,7 @@ public class BaseMovement : MonoBehaviour
                 size = PlayerSize.Medium;
             }
         }
-        if (Input.GetKeyDown(KeyCode.E) && size != PlayerSize.Large)
+        if (canMove && Input.GetKeyDown(KeyCode.E) && size != PlayerSize.Large)
         {
             transform.position = new Vector3(transform.position.x, transform.position.y + transformOffset, transform.position.z);
             transform.localScale *= 2;
@@ -79,6 +100,16 @@ public class BaseMovement : MonoBehaviour
             }
         }
     }
+    private void animate(bool running)
+    {
+        Sprite[] frames = running ? runFrames : idleFrames;
+        if (sprite == null || frames == null || frames.Length == 0) return;
+        if (running != wasRunning) animTime = 0f; // start each cycle from its first frame
+        wasRunning = running;
+        animTime += Time.deltaTime;
+        float fps = running ? runFps : idleFps;
+        sprite.sprite = frames[(int)(animTime * fps) % frames.Length];
+    }
     public void jump()
     {
         canJump = false;
@@ -86,14 +117,25 @@ public class BaseMovement : MonoBehaviour
     }
     private void OnCollisionEnter(Collision other)
     {
-        if (other.gameObject.tag == "Floor" && transform.position.y > other.transform.position.y)
+        // other.collider, not other.gameObject: for parts of a moving object (fork tines) gameObject
+        // is the parent that owns the Rigidbody, which isn't tagged.
+        if (other.collider.CompareTag("Floor") && transform.position.y > other.transform.position.y)
         {
             canJump = true;
         }
-        if (other.gameObject.tag == "Obstacle")
+        if (other.collider.CompareTag("Obstacle"))
         {
-            endGame(DeathType.Obstacle);
+            respawn(); // hazards send her back to the last lit lamp
         }
+    }
+    private void OnCollisionStay(Collision other)
+    {
+        MovingPlate p = other.gameObject.GetComponent<MovingPlate>();
+        if (p != null && transform.position.y > other.transform.position.y) plate = p;
+    }
+    private void OnCollisionExit(Collision other)
+    {
+        if (plate != null && other.gameObject == plate.gameObject) plate = null;
     }
     public void endGame(DeathType deathType)
     {
@@ -112,6 +154,33 @@ public class BaseMovement : MonoBehaviour
     {
         currentRespawn = respawn;
     }
+    public int ItemCount => collectables.Count;
+    // Items picked up inside one level (its root object), so each door only counts its own level's memories.
+    public int ItemsIn(Transform level) => collectables.FindAll(c => c.transform.IsChildOf(level)).Count;
+    // Stop input and physics, e.g. while walking into the door.
+    public void lockControls()
+    {
+        canMove = false;
+        rb.linearVelocity = Vector3.zero;
+        rb.isKinematic = true;
+    }
+    public void unlockControls()
+    {
+        rb.isKinematic = false;
+        canMove = true;
+    }
+    public void respawn()
+    {
+        // Back to Regular size, and the blocks of the section she is retrying back to their starts, so nothing softlocks.
+        size = PlayerSize.Medium;
+        transform.localScale = baseScale;
+        speed = baseSpeed;
+        Pushable.ResetAhead(currentRespawn.x);
+        rb.linearVelocity = Vector3.zero;
+        rb.position = currentRespawn;
+        transform.position = currentRespawn;
+        CreepingWall.ResetAll(currentRespawn.x); // Level 3's wall restarts a little behind her
+    }
     public void obtainCollectable(CollectableScript collectable)
     {
         collectables.Add(collectable);
@@ -119,6 +188,7 @@ public class BaseMovement : MonoBehaviour
     }
     public void updateCollectableDisplay()
     {
+        if (startingCollectableObject == null) return; // no display set up in this scene; the count still works
         while (collectables.Count < collectableObjects.Count)
         {
             Destroy(collectableObjectsBack());
