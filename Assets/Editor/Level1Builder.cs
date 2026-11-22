@@ -28,7 +28,7 @@ public static class Level1Builder
 
     static Material green, brown, gray, red, amber, pink, gold;
     static Material soil, grass, hedge, hedgeLight, pot, potRim, stone, moss, thorn, wood, rose, peach, cream,
-        pollenGold, stem, logMat, catMat;
+        pollenGold, stem, logMat;
     static Sprite grassTop, dirt, platformSprite, wallSprite;
     static Component playerScript;
 
@@ -101,7 +101,6 @@ public static class Level1Builder
         pollenGold = GetMaterial("GardenGold", new Color32(246, 202, 92, 255));
         stem = GetMaterial("GardenStem", new Color32(120, 176, 104, 255));
         logMat = GetMaterial("GardenLog", new Color32(168, 112, 82, 255));
-        catMat = GetMaterial("GardenCat", new Color32(112, 100, 116, 255));
 
         // ---- Floors and end hedges (tile coordinates, both ends included) ----
         Ground(root, "Floor A", 0, 5, -3, -1);    // small gap at tile 6
@@ -114,14 +113,12 @@ public static class Level1Builder
 
         // ---- Section 1: walk and jump (tiles 0-13) ----
         AddCheckpoint(root, "Checkpoint 1", 2);   // first thing she touches, so the lamp is explained early
-        CatPrompt(root, 1f, "Space: jump");
         Pot(root, "S1 pot", 4, 1);
         Pot(root, "S1 tall pot", 8, 2);
         AddCheckpoint(root, "Checkpoint 2", 13);
 
         // ---- Section 2: hedge gap (tiles 14-27) ----
         // The hedge reaches far above her jump; the only way through is the 1-high gap at its roots.
-        CatPrompt(root, 14.5f, "Q: shrink");
         Hedge(root, "S2 hedge", 16, 19, 1, 7, null);
         Pot(root, "S2 pot", 21, 1);
         Hedge(root, "S2 nook roof", 23, 25, 1, 1, "Floor");
@@ -130,7 +127,6 @@ public static class Level1Builder
         AddCheckpoint(root, "Checkpoint 3", 27);
 
         // ---- Section 3: push the stone (tiles 28-41) ----
-        CatPrompt(root, 28.5f, "E: grow");
         AddPushable(root, "S3 stone", 31, 32, 0, 1); // push (Big) into the trench to bridge it
         AddCheckpoint(root, "Checkpoint 4", 40);
 
@@ -277,29 +273,6 @@ public static class Level1Builder
         }
     }
 
-    // A small sitting cat with the control it teaches floating above it. Placeholder until cat art exists.
-    static void CatPrompt(Transform root, float x, string text)
-    {
-        float z = 0.8f;
-        Deco(root, PrimitiveType.Sphere, new Vector3(x, 0.3f, z), new Vector3(0.55f, 0.6f, 0.4f), 0f, catMat);
-        Deco(root, PrimitiveType.Sphere, new Vector3(x + 0.05f, 0.75f, z), new Vector3(0.42f, 0.38f, 0.38f), 0f, catMat);
-        Deco(root, PrimitiveType.Cube, new Vector3(x - 0.08f, 0.95f, z), new Vector3(0.12f, 0.12f, 0.1f), 45f, catMat);
-        Deco(root, PrimitiveType.Cube, new Vector3(x + 0.18f, 0.95f, z), new Vector3(0.12f, 0.12f, 0.1f), 45f, catMat);
-        Deco(root, PrimitiveType.Cube, new Vector3(x - 0.35f, 0.25f, z), new Vector3(0.08f, 0.5f, 0.08f), 35f, catMat);
-
-        GameObject label = new GameObject("Prompt " + text);
-        label.transform.SetParent(root, false);
-        label.transform.localPosition = new Vector3(x, 1.6f, z);
-        TextMesh tm = label.AddComponent<TextMesh>();
-        tm.text = text;
-        tm.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        tm.GetComponent<MeshRenderer>().sharedMaterial = tm.font.material;
-        tm.fontSize = 48;
-        tm.characterSize = 0.06f;
-        tm.anchor = TextAnchor.MiddleCenter;
-        tm.color = new Color32(120, 50, 70, 255);
-    }
-
     // An oversized flower standing behind the play area: stem, two leaves, five petals and a center.
     static void Flower(Transform root, float x, float height, float size, float z, Material petals)
     {
@@ -321,18 +294,7 @@ public static class Level1Builder
         // Painted garden (Assets/Art/level_1_frame.jpg) behind the path, repeated sideways between the
         // end hedges (x -2 to 72). The camera is flat (orthographic), so no perspective maths: 16 units tall,
         // and the planters' bottom (72% down the picture) sits on the floor top at y 0, so centre y = 3.5.
-        Sprite backdrop = LoadSprite("Assets/Art/level_1_frame.jpg", 768f / 16f);
-        if (backdrop != null)
-        {
-            GameObject bg = new GameObject("Backdrop");
-            bg.transform.SetParent(root, false);
-            bg.transform.localPosition = new Vector3(35f, 0.71875f * 16f - 8f, 15f);
-            SpriteRenderer bsr = bg.AddComponent<SpriteRenderer>();
-            bsr.sprite = backdrop;
-            bsr.drawMode = SpriteDrawMode.Tiled;
-            bsr.size = new Vector2(74f, 16f);
-            bsr.sortingOrder = -100;
-        }
+        Backdrop(root, "Assets/Art/level_1_frame.jpg", 35f, 0.71875f * 16f - 8f, 15f, 74f, 16f);
 
         Flower(root, 6f, 3.5f, 1.3f, 1.6f, peach);
         Flower(root, 11.5f, 5f, 1.6f, 2.2f, rose);
@@ -371,6 +333,22 @@ public static class Level1Builder
         Material m = AssetDatabase.LoadAssetAtPath<Material>(path);
         if (m == null) { m = new Material(sh); AssetDatabase.CreateAsset(m, path); }
         go.GetComponent<ParticleSystemRenderer>().sharedMaterial = m;
+    }
+
+    // Painted background art (1363x768-ish jpg) as a sprite, height h units, repeated sideways to width w.
+    internal static void Backdrop(Transform root, string path, float cx, float cy, float z, float w, float h)
+    {
+        Texture2D tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        Sprite sprite = LoadSprite(path, tex != null ? tex.height / h : 768f / h);
+        if (sprite == null) return;
+        GameObject go = new GameObject("Backdrop art");
+        go.transform.SetParent(root, false);
+        go.transform.localPosition = new Vector3(cx, cy, z);
+        SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = sprite;
+        sr.drawMode = SpriteDrawMode.Tiled;
+        sr.size = new Vector2(w, h);
+        sr.sortingOrder = -100;
     }
 
     // Decoration: a primitive without a collider.
@@ -504,7 +482,7 @@ public static class Level1Builder
         return LoadSprite(SpriteFolder + "/" + file + ".png", 16f);
     }
 
-    static Sprite LoadSprite(string path, float ppu)
+    internal static Sprite LoadSprite(string path, float ppu)
     {
         TextureImporter imp = AssetImporter.GetAtPath(path) as TextureImporter;
         if (imp == null)

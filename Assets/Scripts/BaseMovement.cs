@@ -21,6 +21,7 @@ public class BaseMovement : MonoBehaviour
     public float deathFps = 8f;
     public float deathHold = 0.6f; // seconds on the last death frame before she respawns
     private bool dying;
+    private bool gameOver; // timer ran out: nothing can kill or respawn her any more
     public float idleFps = 6f;
     public float runFps = 10f;
     // Below this y she counts as fallen into a pit: just under the floors, while she's still on screen,
@@ -155,7 +156,8 @@ public class BaseMovement : MonoBehaviour
         rb.constraints = RigidbodyConstraints.FreezeAll;
         if (deathType == DeathType.Timeout)
         {
-            // timeout cutscene or death
+            gameOver = true;
+            WakeUpScreen.Show(); // she wakes up from the nightmare in her empty room
         }
         if (deathType == DeathType.Obstacle)
         {
@@ -184,7 +186,7 @@ public class BaseMovement : MonoBehaviour
     // Death: freeze, play the death frames, then back to the last lit lamp.
     public void die()
     {
-        if (dying) return;
+        if (dying || gameOver) return;
         StartCoroutine(DeathRoutine());
     }
     private System.Collections.IEnumerator DeathRoutine()
@@ -201,6 +203,7 @@ public class BaseMovement : MonoBehaviour
                 yield return new WaitForSeconds(1f / deathFps);
             }
         yield return new WaitForSeconds(deathHold);
+        if (gameOver) yield break; // the timer ran out mid-death: stay down, the wake-up screen takes over
         unlockControls(); // before respawn: a kinematic body can't have its velocity set
         respawn();
         dying = false;
