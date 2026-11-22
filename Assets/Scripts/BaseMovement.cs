@@ -135,7 +135,7 @@ public class BaseMovement : MonoBehaviour
     {
         // other.collider, not other.gameObject: for parts of a moving object (fork tines) gameObject
         // is the parent that owns the Rigidbody, which isn't tagged.
-        if (other.collider.CompareTag("Floor") && transform.position.y > other.transform.position.y)
+        if (other.collider.CompareTag("Floor") && other.collider.bounds.min.y < GetComponent<Collider>().bounds.min.y && !canJump)
         {
             canJump = true;
         }
