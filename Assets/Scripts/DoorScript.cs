@@ -8,7 +8,7 @@ using UnityEngine.UI;
 public class DoorScript : MonoBehaviour
 {
     public Transform destination;       // where she appears in the next level
-    public int itemsNeeded = 0;         // GDD says 2; raise once the memory items are in the level
+    public int itemsNeeded = 0;         // memory items from this level she must carry before it opens
     public Sprite closedSprite;
     public Sprite openSprite;
     public float openPause = 0.35f;
@@ -17,11 +17,40 @@ public class DoorScript : MonoBehaviour
 
     private SpriteRenderer sprite;
     private bool entering;
+    private BaseMovement player;
+    private TextMesh counter; // "1/2" above a locked door
 
     private void Start()
     {
         sprite = GetComponentInChildren<SpriteRenderer>();
         if (sprite != null && closedSprite != null) sprite.sprite = closedSprite;
+        GameObject p = GameObject.FindWithTag("Player");
+        if (p != null) player = p.GetComponent<BaseMovement>();
+        if (itemsNeeded > 0) counter = MakeCounter();
+    }
+
+    private int Have => player == null ? 0 : player.ItemsIn(transform.root);
+
+    private void Update()
+    {
+        if (counter == null) return;
+        int have = Mathf.Min(Have, itemsNeeded);
+        counter.text = have + "/" + itemsNeeded;
+        counter.color = have >= itemsNeeded ? new Color32(250, 210, 110, 255) : new Color32(255, 240, 230, 255);
+    }
+
+    private TextMesh MakeCounter()
+    {
+        GameObject go = new GameObject("Item counter");
+        go.transform.SetParent(transform, false);
+        go.transform.localPosition = new Vector3(0f, 1.7f, -0.1f);
+        TextMesh tm = go.AddComponent<TextMesh>();
+        tm.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        go.GetComponent<MeshRenderer>().sharedMaterial = tm.font.material;
+        tm.fontSize = 48;
+        tm.characterSize = 0.07f;
+        tm.anchor = TextAnchor.MiddleCenter;
+        return tm;
     }
 
     // Enter logs why the door won't open; Stay lets her change size while standing in the doorway.
@@ -39,9 +68,9 @@ public class DoorScript : MonoBehaviour
             if (explain) Debug.Log("The door only opens at regular size.");
             return;
         }
-        if (player.ItemCount < itemsNeeded)
+        if (player.ItemsIn(transform.root) < itemsNeeded)
         {
-            if (explain) Debug.Log("The door is locked. Items: " + player.ItemCount + "/" + itemsNeeded);
+            if (explain) Debug.Log("The door is locked. Items: " + player.ItemsIn(transform.root) + "/" + itemsNeeded);
             return;
         }
         if (destination == null)

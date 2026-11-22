@@ -38,12 +38,14 @@ public class Pushable : MonoBehaviour
         rb.constraints = canPush ? locked : locked | RigidbodyConstraints.FreezePositionX;
     }
 
-    // ponytail: resets every block in the scene, not just the current section; fine while
-    // blocks in other sections can't be affected from where she respawns.
-    public static void ResetAll()
+    // Puts back only the blocks that start ahead of where she respawns: those belong to the section
+    // she is retrying. Blocks behind her stay where she left them, so a bridge she already built
+    // (a stone in a trench, a crate in a gap) doesn't vanish when she dies further on.
+    public static void ResetAhead(float respawnX)
     {
         foreach (Pushable p in all)
         {
+            if (p.start.x < respawnX) continue;
             p.rb.linearVelocity = Vector3.zero;
             p.rb.position = p.start;
             p.transform.position = p.start;

@@ -8,10 +8,16 @@ using UnityEngine.SceneManagement;
 // the Level 1 door sends her to Level2/Spawn.
 // One tile = one unit, coordinates are local to Level2. Floor tops are at y = 0 unless noted.
 //
+// Hot pink, mint and lemon over deep purple: polka-dot tablecloth, giant plates, a faded stuck
+// clock and stretched balloons in the background (Dressing).
+//
 // Section 1 (x 0-31):   one plate loops over a pit, then flickering candle flames.
 // Section 2 (x 32-63):  a side-to-side plate, then an up-and-down plate to a ledge (top y = 5).
-// Section 3 (x 64-87):  four plates bobbing up and down out of phase over a long pit.
-// Section 4 (x 88-125): cake climb, inside the cake. Four cream floors zigzag upward, each with a
+// Section 3 (x 64-83):  ride a lift plate with a present on it, push it (Big) onto a cup as a step.
+// Section 4 (x 84-103): crawl (Small) under a small table past two flickering flames.
+// Section 5 (x 104-141): cake climb, inside the cake (local to the "Cake" child, shifted
+//                       CakeShift right; the x values below are before the shift).
+//                       Four cream floors zigzag upward, each with a
 //                       4-tile hole and a gift-box step under it. Giant forks stab out of the back
 //                       of the cake toward the camera on fixed loops, shaking first as a warning.
 //                       Two gifts must be pushed into place (Big) first: one from outside the cake
@@ -24,6 +30,7 @@ public static class Level2Builder
     const float RootX = 1000f;
 
     static Material floorMat, plateMat, candleMat, flameMat, cakeMat, frostingMat, creamMat, insideMat, crumbMat, berryMat, forkMat, ribbonMat;
+    static Material purpleMat, lemonMat, mintMat, hotPinkMat, clockMat;
 
     [MenuItem("CutieHack/Build Level 2")]
     public static void Build()
@@ -50,6 +57,11 @@ public static class Level2Builder
         berryMat = Level1Builder.GetMaterial("Level2Berry", new Color32(220, 60, 80, 255));
         forkMat = Level1Builder.GetMaterial("Level2Fork", new Color32(185, 192, 205, 255));
         ribbonMat = Level1Builder.GetMaterial("Level2Ribbon", new Color32(255, 220, 90, 255));
+        purpleMat = Level1Builder.GetMaterial("Level2Purple", new Color32(58, 28, 88, 255));
+        lemonMat = Level1Builder.GetMaterial("Level2Lemon", new Color32(255, 236, 110, 255));
+        mintMat = Level1Builder.GetMaterial("Level2Mint", new Color32(135, 230, 190, 255));
+        hotPinkMat = Level1Builder.GetMaterial("Level2HotPink", new Color32(255, 80, 165, 255));
+        clockMat = Level1Builder.GetMaterial("Level2Clock", new Color32(150, 130, 170, 255)); // faded into the purple
 
         GameObject rootGo = new GameObject(RootName);
         Undo.RegisterCreatedObjectUndo(rootGo, "Build Level 2");
@@ -76,15 +88,40 @@ public static class Level2Builder
         Tiles(root, "S2 ledge", 52, 63, -3, 4); // top at y = 5
         Level1Builder.AddCheckpoint(root, "Checkpoint 2", 60, 5f);
 
-        // ---- Section 3: four bobbing plates (x 64-87), ledge height 5 ----
-        // pit at x 64-83
-        for (int i = 0; i < 4; i++)
-            Plate(root, "S3 plate " + (i + 1), 66.5f + 5f * i, 1.75f, new Vector3(0f, 4f, 0f), 3f, i * 0.25f);
-        Tiles(root, "Cake floor", 84, 125, -3, 4); // top at y = 5, the cake stands on it
-        Level1Builder.AddCheckpoint(root, "Checkpoint 3", 87, 5f);
+        // ---- Section 3: ride and push (x 64-83) ----
+        // Pit at x 64-71. A wide plate carries a present up from ledge height (5) to 7.5 and back.
+        // Near the top she goes Big and pushes the present off onto the cup beside it (top 7).
+        // The cup sits half a unit below the plate's peak so the present clears its edge for about
+        // 1.5 s of each loop; level with the peak, it only lined up for an instant and jammed.
+        // Standing on the present is the only way up to the high shelf (top 11): from the plate
+        // or the bare cup a jump tops out at 10. Up and down only: presents are frozen sideways unless she's
+        // Big, so a side-to-side plate would slide out from under one.
+        Plate(root, "S3 lift", 67f, 4.75f, new Vector3(0f, 2.5f, 0f), 5f, 0f, 5f);
+        Present(root, "S3 gift", 68.5f, 5f, 2);
+        Box(root, "S3 cup", 71f, 2f, 2f, 10f, lemonMat, "Floor"); // y -3 to 7
+        Tiles(root, "S3 high shelf", 72, 83, -3, 10); // top at y = 11
+        Level1Builder.AddItem(root, "Hat", 76f, 11f); // memory item: reward for reaching the high shelf
+        Level1Builder.AddCheckpoint(root, "Checkpoint 3", 80, 11f);
 
-        // ---- Section 4: cake climb (x 91-114) ----
-        BuildCake(root);
+        // ---- Section 4: under the table (x 84-103) ----
+        // Drop down to the tablecloth (top 5). A small table at x 88-100 has its cloth hanging to
+        // 1 above the floor, so only Small fits under, past two flickering candle flames.
+        // The cloth goes up to 14: too tall to jump over, even from the high shelf.
+        Tiles(root, "Cake floor", 84, 141, -3, 4); // top at y = 5, the cake stands on it further right
+        Box(root, "Table", 94f, 10f, 12f, 8f, mintMat, "Floor"); // y 6 to 14
+        Deco(root, "Table top", 94f, 14.15f, 13f, 0.5f, -0.1f, lemonMat);
+        TableFlame(root, "Table flame A", 91.5f, 0f);
+        TableFlame(root, "Table flame B", 96.5f, 0.5f);
+        Level1Builder.AddItem(root, "Card", 93.5f, 5f); // memory item: under the table, between the flames
+        Level1Builder.AddCheckpoint(root, "Checkpoint 4", 102, 5f);
+
+        // ---- Section 5: cake climb, shifted right to make room for sections 3 and 4 ----
+        Transform cake = new GameObject("Cake").transform;
+        cake.SetParent(root, false);
+        cake.localPosition = new Vector3(CakeShift, 0f, 0f);
+        BuildCake(cake);
+
+        Dressing(root);
 
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         LinkLevel1Door(spawn);
@@ -96,6 +133,8 @@ public static class Level2Builder
     // Layer k (1-4) is a cream filling floor with its top at y = 5 + 4k and a 4-tile hole at one
     // end: odd layers at the right, even layers at the left. A 2-high gift box under each hole
     // splits the 4-unit climb into two 2-unit hops, leaving 3.5 units of headroom per floor.
+    // Cake coordinates are local to the "Cake" child, which sits CakeShift to the right in Level2.
+    const float CakeShift = 16f;
     const int CakeLeft = 92, CakeRight = 113, Hole = 4, Layers = 4;
     const float LayerGap = 4f, Ground = 5f;
 
@@ -158,7 +197,7 @@ public static class Level2Builder
             Deco(root, "Cake candle flame " + cx, cx + 0.5f, summit + 2.35f, 0.35f, 0.6f, 1f, flameMat);
         }
 
-        Level1Builder.AddCheckpoint(root, "Checkpoint 4", CakeLeft + Hole + 1, Ground + LayerGap * 2);
+        Level1Builder.AddCheckpoint(root, "Checkpoint 5", CakeLeft + Hole + 1, Ground + LayerGap * 2);
 
         // ---- Forks ----
         // Stabbing out of the back of the cake through her path, spread out and on different timings.
@@ -182,8 +221,9 @@ public static class Level2Builder
         Present(root, "Gift top", 106f, Ground + LayerGap * 3, 4);
 
         // Summit: door at the right end of the top layer.
-        DoorScript door = Level1Builder.AddDoor(root, "Door", CakeRight - 4, null, summit);
-        door.itemsNeeded = 0;
+        // Leads to Level 3 if it's built; building Level 3 also links this door.
+        DoorScript door = Level1Builder.AddDoor(root, "Door", CakeRight - 4, Level3Builder.GetSpawn(), summit);
+        door.itemsNeeded = 2; // card + hat
     }
 
     // A fork that stabs out of the back of the cake toward the camera. Built facing the camera:
@@ -248,6 +288,98 @@ public static class Level2Builder
         }
     }
 
+    // A short flame standing on the floor under the table (top y = 5), flickering on and off.
+    static void TableFlame(Transform root, string name, float x, float phase)
+    {
+        GameObject flame = Box(root, name, x, 5.45f, 0.4f, 0.9f, flameMat, "Obstacle");
+        FlameFlicker ff = flame.AddComponent<FlameFlicker>();
+        ff.onTime = 0.9f;
+        ff.offTime = 1.3f;
+        ff.phase = phase;
+    }
+
+    // Background only, no colliders: deep purple backdrop, polka dots on the tablecloth,
+    // giant plates, a faded clock stuck at one time, and stretched balloons.
+    static void Dressing(Transform root)
+    {
+        Deco(root, "Backdrop", 70f, 14f, 170f, 40f, 3f, purpleMat);
+
+        // Polka dots on the front of every tablecloth floor (x1, x2, bottom, top) and the small table.
+        var cloth = new (float x1, float x2, float y1, float y2)[]
+        {
+            (0f, 10f, -3f, 0f), (18f, 32f, -3f, 0f), (52f, 64f, -3f, 5f),
+            (72f, 84f, -3f, 11f), (84f, 142f, -3f, 5f), (88f, 100f, 6f, 14f),
+        };
+        int n = 0;
+        foreach (var c in cloth)
+        {
+            int row = 0;
+            for (float y = c.y2 - 0.7f; y > c.y1 + 0.3f; y -= 1.4f, row++)
+                for (float x = c.x1 + 0.6f + (row % 2) * 0.7f; x < c.x2 - 0.3f; x += 1.4f)
+                    Shape(root, PrimitiveType.Sphere, "Dot " + ++n, new Vector3(x, y, -0.53f),
+                        new Vector3(0.45f, 0.45f, 0.05f), 0f, n % 2 == 0 ? lemonMat : mintMat);
+        }
+
+        // Giant plates: a white rim with a cream middle.
+        var plates = new (float x, float y, float d)[] { (14f, 9f, 9f), (44f, 14f, 11f), (80f, 19f, 10f) };
+        foreach (var p in plates)
+        {
+            Disc(root, "Giant plate " + p.x, p.x, p.y, p.d, 2.5f, plateMat);
+            Disc(root, "Giant plate middle " + p.x, p.x, p.y, p.d * 0.7f, 2.45f, creamMat);
+        }
+
+        // Faded clock, stuck: the hands never move.
+        Vector3 clock = new Vector3(60f, 17f, 2.4f);
+        Disc(root, "Clock", clock.x, clock.y, 7f, clock.z, clockMat);
+        for (int h = 0; h < 12; h++)
+            Hand(root, "Clock tick " + h, clock, h * 30f, 2.8f, 0.6f, 0.15f, purpleMat);
+        Hand(root, "Clock hour hand", clock, 100f, 0f, 1.8f, 0.3f, purpleMat);
+        Hand(root, "Clock minute hand", clock, 230f, 0f, 2.7f, 0.18f, purpleMat);
+
+        // Stretched balloons on strings, leaning a little.
+        var balloons = new (float x, float y, float tilt, Material mat)[]
+        {
+            (6f, 11f, 6f, hotPinkMat), (27f, 14f, -4f, mintMat), (36f, 10f, 8f, lemonMat),
+            (68f, 13f, -6f, hotPinkMat), (92f, 18f, 5f, lemonMat), (101f, 15f, -8f, mintMat),
+        };
+        foreach (var b in balloons)
+        {
+            Shape(root, PrimitiveType.Sphere, "Balloon " + b.x, new Vector3(b.x, b.y, 2.2f),
+                new Vector3(1.4f, 3.2f, 0.3f), b.tilt, b.mat);
+            Shape(root, PrimitiveType.Cube, "Balloon string " + b.x, new Vector3(b.x, b.y - 3.6f, 2.25f),
+                new Vector3(0.06f, 4f, 0.05f), 0f, plateMat);
+        }
+    }
+
+    // A flat circle facing the camera.
+    static void Disc(Transform root, string name, float x, float y, float d, float z, Material mat)
+    {
+        GameObject go = Shape(root, PrimitiveType.Cylinder, name, new Vector3(x, y, z), new Vector3(d, 0.02f, d), 0f, mat);
+        go.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+    }
+
+    // A bar on the clock face pointing at `angle` (degrees clockwise from 12), starting `from` out from the middle.
+    static void Hand(Transform root, string name, Vector3 center, float angle, float from, float length, float width, Material mat)
+    {
+        float a = angle * Mathf.Deg2Rad;
+        Vector3 dir = new Vector3(Mathf.Sin(a), Mathf.Cos(a), 0f);
+        Vector3 pos = center + dir * (from + length / 2f) + new Vector3(0f, 0f, -0.05f);
+        Shape(root, PrimitiveType.Cube, name, pos, new Vector3(width, length, 0.02f), -angle, mat);
+    }
+
+    static GameObject Shape(Transform root, PrimitiveType type, string name, Vector3 pos, Vector3 scale, float tilt, Material mat)
+    {
+        GameObject go = GameObject.CreatePrimitive(type);
+        go.name = name;
+        Object.DestroyImmediate(go.GetComponent<Collider>());
+        go.transform.SetParent(root, false);
+        go.transform.localPosition = pos;
+        go.transform.localScale = scale;
+        go.transform.localRotation = Quaternion.Euler(0f, 0f, tilt);
+        go.GetComponent<Renderer>().sharedMaterial = mat;
+        return go;
+    }
+
     // Decoration box: no collider, pushed back to z so it sits behind the play layer.
     static void Deco(Transform root, string name, float cx, float cy, float w, float h, float z, Material mat)
     {
@@ -275,9 +407,9 @@ public static class Level2Builder
     }
 
     // A 3-wide, half-tile-thick plate that loops from its start by `offset`.
-    static void Plate(Transform root, string name, float cx, float cy, Vector3 offset, float period, float phase)
+    static void Plate(Transform root, string name, float cx, float cy, Vector3 offset, float period, float phase, float width = 3f)
     {
-        GameObject go = Box(root, name, cx, cy, 3f, 0.5f, plateMat, "Floor");
+        GameObject go = Box(root, name, cx, cy, width, 0.5f, plateMat, "Floor");
         go.AddComponent<Rigidbody>();
         MovingPlate mp = go.AddComponent<MovingPlate>();
         mp.offset = offset;

@@ -149,6 +149,8 @@ public class BaseMovement : MonoBehaviour
         currentRespawn = respawn;
     }
     public int ItemCount => collectables.Count;
+    // Items picked up inside one level (its root object), so each door only counts its own level's memories.
+    public int ItemsIn(Transform level) => collectables.FindAll(c => c.transform.IsChildOf(level)).Count;
     // Stop input and physics, e.g. while walking into the door.
     public void lockControls()
     {
@@ -163,14 +165,15 @@ public class BaseMovement : MonoBehaviour
     }
     public void respawn()
     {
-        // Back to Regular size, and every pushable block back to its start, so nothing softlocks.
+        // Back to Regular size, and the blocks of the section she is retrying back to their starts, so nothing softlocks.
         size = PlayerSize.Medium;
         transform.localScale = baseScale;
         speed = baseSpeed;
-        Pushable.ResetAll();
+        Pushable.ResetAhead(currentRespawn.x);
         rb.linearVelocity = Vector3.zero;
         rb.position = currentRespawn;
         transform.position = currentRespawn;
+        CreepingWall.ResetAll(currentRespawn.x); // Level 3's wall restarts a little behind her
     }
     public void obtainCollectable(CollectableScript collectable)
     {
@@ -179,6 +182,7 @@ public class BaseMovement : MonoBehaviour
     }
     public void updateCollectableDisplay()
     {
+        if (startingCollectableObject == null) return; // no display set up in this scene; the count still works
         while (collectables.Count < collectableObjects.Count)
         {
             Destroy(collectableObjectsBack());

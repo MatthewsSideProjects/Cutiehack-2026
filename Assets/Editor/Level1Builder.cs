@@ -27,6 +27,8 @@ public static class Level1Builder
     static readonly Color Gold = new Color32(239, 159, 39, 255);
 
     static Material green, brown, gray, red, amber, pink, gold;
+    static Material soil, grass, hedge, hedgeLight, pot, potRim, stone, moss, thorn, wood, rose, peach, cream,
+        pollenGold, stem, logMat, catMat;
     static Sprite grassTop, dirt, platformSprite, wallSprite;
     static Component playerScript;
 
@@ -82,41 +84,75 @@ public static class Level1Builder
             cam.transform.position = new Vector3(2f, 2f, -10f);
         }
 
-        // ---- Floors and end walls (tile coordinates, both ends included) ----
-        Add(root, "Floor A", 0, 9, -3, -1, "Floor", green, look: Look.Floor);          // before the gap
-        Add(root, "Floor B", 13, 34, -3, -1, "Floor", green, look: Look.Floor);        // after the gap, up to the trench
-        Add(root, "Trench bottom", 35, 36, -3, -3, "Floor", green, look: Look.Floor);  // trench is 2 wide, 2 deep
-        Add(root, "Floor C", 37, 69, -3, -1, "Floor", green, look: Look.Floor);        // after the trench
-        Add(root, "Left wall", -1, -1, -3, 3, null, gray, look: Look.Wall);
-        Add(root, "Right wall", 70, 70, -3, 3, null, gray, look: Look.Wall);
+        // ---- Garden look: peach, soft greens and rose in golden-hour light ----
+        soil = GetMaterial("GardenSoil", new Color32(196, 140, 110, 255));
+        grass = GetMaterial("GardenGrass", new Color32(170, 214, 140, 255));
+        hedge = GetMaterial("GardenHedge", new Color32(98, 150, 98, 255));
+        hedgeLight = GetMaterial("GardenHedgeLight", new Color32(196, 210, 120, 255));
+        pot = GetMaterial("GardenPot", new Color32(214, 124, 94, 255));
+        potRim = GetMaterial("GardenPotRim", new Color32(238, 156, 118, 255));
+        stone = GetMaterial("GardenStone", new Color32(186, 172, 166, 255));
+        moss = GetMaterial("GardenMoss", new Color32(146, 186, 112, 255));
+        thorn = GetMaterial("GardenThorn", new Color32(118, 58, 78, 255));
+        wood = GetMaterial("GardenWood", new Color32(232, 186, 146, 255));
+        rose = GetMaterial("GardenRose", new Color32(236, 118, 142, 255));
+        peach = GetMaterial("GardenPeach", new Color32(252, 192, 160, 255));
+        cream = GetMaterial("GardenCream", new Color32(255, 230, 205, 255));
+        pollenGold = GetMaterial("GardenGold", new Color32(246, 202, 92, 255));
+        stem = GetMaterial("GardenStem", new Color32(120, 176, 104, 255));
+        logMat = GetMaterial("GardenLog", new Color32(168, 112, 82, 255));
+        catMat = GetMaterial("GardenCat", new Color32(112, 100, 116, 255));
 
-        // ---- Section 1: jump (tiles 0-13) ----
-        Add(root, "S1 step", 4, 4, 0, 0, "Floor", brown, look: Look.Platform);
-        Add(root, "S1 wall", 7, 7, 0, 1, null, gray, look: Look.Wall);
-        // gap at tiles 10-12 is simply empty space between Floor A and Floor B
-        AddCheckpoint(root, "Checkpoint 1", 13);
+        // ---- Floors and end hedges (tile coordinates, both ends included) ----
+        Ground(root, "Floor A", 0, 5, -3, -1);    // small gap at tile 6
+        Ground(root, "Floor A2", 7, 9, -3, -1);   // wider gap at tiles 10-12
+        Ground(root, "Floor B", 13, 34, -3, -1);  // up to the trench
+        Ground(root, "Trench bottom", 35, 36, -3, -3); // trench is 2 wide, 2 deep
+        Ground(root, "Floor C", 37, 69, -3, -1);
+        Hedge(root, "Left hedge", -2, -1, -3, 7, null);
+        Hedge(root, "Right hedge", 70, 71, -3, 7, null);
 
-        // ---- Section 2: shrink (tiles 14-27) ----
-        Add(root, "S2 tunnel ceiling", 16, 19, 1, 2, null, gray, look: Look.Wall);
-        Add(root, "S2 step", 21, 21, 0, 0, "Floor", brown, look: Look.Platform);
-        Add(root, "S2 nook roof", 23, 25, 1, 1, "Floor", brown, look: Look.Platform);
-        Add(root, "S2 nook end wall", 25, 25, 0, 0, null, gray, look: Look.Wall);
-        AddItem(root, "Teacup", 24, 0, gold);
-        AddCheckpoint(root, "Checkpoint 2", 27);
+        // ---- Section 1: walk and jump (tiles 0-13) ----
+        AddCheckpoint(root, "Checkpoint 1", 2);   // first thing she touches, so the lamp is explained early
+        CatPrompt(root, 1f, "Space: jump");
+        Pot(root, "S1 pot", 4, 1);
+        Pot(root, "S1 tall pot", 8, 2);
+        AddCheckpoint(root, "Checkpoint 2", 13);
 
-        // ---- Section 3: grow and push (tiles 28-41) ----
-        AddPushable(root, "S3 stone", 31, 32, 0, 1, brown); // push (Big) into the trench to bridge it
-        AddCheckpoint(root, "Checkpoint 3", 41);
+        // ---- Section 2: hedge gap (tiles 14-27) ----
+        // The hedge reaches far above her jump; the only way through is the 1-high gap at its roots.
+        CatPrompt(root, 14.5f, "Q: shrink");
+        Hedge(root, "S2 hedge", 16, 19, 1, 7, null);
+        Pot(root, "S2 pot", 21, 1);
+        Hedge(root, "S2 nook roof", 23, 25, 1, 1, "Floor");
+        Hedge(root, "S2 nook end", 25, 25, 0, 0, null);
+        AddItem(root, "Teacup", 24, 0);
+        AddCheckpoint(root, "Checkpoint 3", 27);
 
-        // ---- Section 4: block and ledge (tiles 42-55) ----
-        AddPushable(root, "S4 stone", 44, 45, 0, 1, brown); // push (Big) to the pillar as a step
-        Add(root, "S4 pillar", 49, 52, 0, 2, "Floor", gray, look: Look.Wall);
-        AddItem(root, "Gloves", 50, 3, pink);
-        AddCheckpoint(root, "Checkpoint 4", 55);
+        // ---- Section 3: push the stone (tiles 28-41) ----
+        CatPrompt(root, 28.5f, "E: grow");
+        AddPushable(root, "S3 stone", 31, 32, 0, 1); // push (Big) into the trench to bridge it
+        AddCheckpoint(root, "Checkpoint 4", 40);
 
-        // ---- Section 5: door (tiles 56-69) ----
-        Add(root, "S5 crawl ceiling", 60, 62, 1, 2, null, gray, look: Look.Wall);
-        AddDoor(root, "Door", 67, GetLevel2Spawn());
+        // ---- Section 4: thorns and step (tiles 42-55) ----
+        // Thorns hang from a trellis down to 1 above the ground, so only Small crawls under.
+        // Past them there are 3 tiles of room to go Big and push the stone right, against the
+        // garden wall (top 4), as a step.
+        Trellis(root, 41.5f, 46.5f);
+        Thorns(root, "S4 thorns", 42, 44, 1, 3);
+        AddPushable(root, "S4 stone", 48, 49, 0, 1);
+        Add(root, "S4 garden wall", 53, 55, 0, 3, "Floor", stone);
+        Deco(root, PrimitiveType.Cube, new Vector3(54.5f, 4.08f, 0f), new Vector3(3.1f, 0.2f, 1.1f), 0f, moss);
+        AddItem(root, "Gloves", 54, 4);
+        AddCheckpoint(root, "Checkpoint 5", 57);
+
+        // ---- Section 5: ending (tiles 56-69) ----
+        // A hollow log to crawl through as Small, then back to Regular for the door.
+        Add(root, "S5 log", 60, 62, 1, 2, null, logMat);
+        Deco(root, PrimitiveType.Cube, new Vector3(61.5f, 3.05f, 0f), new Vector3(3f, 0.15f, 1.05f), 0f, moss);
+        AddDoor(root, "Door", 67, GetLevel2Spawn()).itemsNeeded = 2; // teacup + gloves
+
+        Dressing(root);
 
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         Selection.activeGameObject = rootGo;
@@ -175,12 +211,164 @@ public static class Level1Builder
         if (applied) cube.GetComponent<MeshRenderer>().enabled = false;
     }
 
-    // A block only Big can push. No tiled sprite: those are separate objects and wouldn't move with it.
-    static void AddPushable(Transform root, string name, int x1, int x2, int y1, int y2, Material mat)
+    // A stone only Big can push, with a mossy cap. The cap is a child so it moves with the stone.
+    static void AddPushable(Transform root, string name, int x1, int x2, int y1, int y2)
     {
-        GameObject go = Add(root, name, x1, x2, y1, y2, "Floor", mat);
+        GameObject go = Add(root, name, x1, x2, y1, y2, "Floor", stone);
+        go.transform.localScale -= new Vector3(0.1f, 0f, 0f); // a hair narrower than the trench, or it rests on both edges
         go.AddComponent<Rigidbody>().mass = 2f;
         go.AddComponent<Pushable>();
+        Deco(go.transform, PrimitiveType.Cube, new Vector3(0f, 0.45f, 0f), new Vector3(1.04f, 0.14f, 1.04f), 0f, moss);
+    }
+
+    // Ground: soil with a grass lip along the top and a few tufts along the front.
+    static void Ground(Transform root, string name, int x1, int x2, int y1, int y2)
+    {
+        Add(root, name, x1, x2, y1, y2, "Floor", soil);
+        float w = x2 - x1 + 1;
+        Deco(root, PrimitiveType.Cube, new Vector3(x1 + w / 2f, y2 + 0.85f, 0f), new Vector3(w + 0.1f, 0.35f, 1.1f), 0f, grass);
+        for (float x = x1 + 0.7f; x < x2 + 1; x += 2.3f)
+            for (int i = -1; i <= 1; i++)
+                Deco(root, PrimitiveType.Cube, new Vector3(x + i * 0.12f, y2 + 1.1f, -0.52f), new Vector3(0.07f, 0.35f, 0.02f), i * 22f, grass);
+    }
+
+    // A golden-hour hedge: dark green block with lit leaf clumps along its top and front.
+    static void Hedge(Transform root, string name, int x1, int x2, int y1, int y2, string tag)
+    {
+        Add(root, name, x1, x2, y1, y2, tag, hedge);
+        for (float x = x1 + 0.5f; x <= x2 + 0.6f; x += 0.9f)
+        {
+            Deco(root, PrimitiveType.Sphere, new Vector3(x, y2 + 0.95f, -0.1f), new Vector3(1f, 0.7f, 1f), 0f, hedgeLight);
+            for (float y = y1 + 0.6f; y < y2 + 0.6f; y += 1.3f)
+                Deco(root, PrimitiveType.Sphere, new Vector3(x + (y % 2f) * 0.3f, y, -0.52f), new Vector3(0.8f, 0.7f, 0.05f), 0f, y > y2 - 0.5f ? hedgeLight : hedge);
+        }
+    }
+
+    // A terracotta flower pot `tall` tiles high with a wider rim and a small sprout on top (decor only).
+    static void Pot(Transform root, string name, int tileX, int tall)
+    {
+        Add(root, name, tileX, tileX, 0, tall - 1, "Floor", pot);
+        Deco(root, PrimitiveType.Cube, new Vector3(tileX + 0.5f, tall - 0.15f, 0f), new Vector3(1.3f, 0.3f, 1.2f), 0f, potRim);
+        Deco(root, PrimitiveType.Sphere, new Vector3(tileX + 0.5f, tall + 0.25f, 0.3f), new Vector3(0.5f, 0.4f, 0.3f), 0f, rose);
+    }
+
+    // Hanging thorns: an Obstacle block with spikes along its underside.
+    static void Thorns(Transform root, string name, int x1, int x2, int y1, int y2)
+    {
+        Add(root, name, x1, x2, y1, y2, "Obstacle", thorn);
+        for (float x = x1 + 0.25f; x < x2 + 1; x += 0.5f)
+            Deco(root, PrimitiveType.Cube, new Vector3(x, y1 - 0.02f, 0f), new Vector3(0.18f, 0.18f, 0.9f), 45f, thorn);
+        for (float x = x1 + 0.6f; x < x2 + 1; x += 1.2f)
+            Deco(root, PrimitiveType.Sphere, new Vector3(x, y2 + 0.3f, -0.55f), new Vector3(0.45f, 0.45f, 0.1f), 0f, rose);
+    }
+
+    // Wooden trellis behind the thorns, from x1 to x2, with roses climbing it.
+    static void Trellis(Transform root, float x1, float x2)
+    {
+        float z = 0.8f, top = 4.6f;
+        Deco(root, PrimitiveType.Cube, new Vector3(x1, top / 2f, z), new Vector3(0.25f, top, 0.2f), 0f, wood);
+        Deco(root, PrimitiveType.Cube, new Vector3(x2, top / 2f, z), new Vector3(0.25f, top, 0.2f), 0f, wood);
+        Deco(root, PrimitiveType.Cube, new Vector3((x1 + x2) / 2f, top, z), new Vector3(x2 - x1 + 0.6f, 0.25f, 0.2f), 0f, wood);
+        for (float x = x1 + 0.8f; x < x2; x += 1.2f)
+        {
+            Deco(root, PrimitiveType.Cube, new Vector3(x, top / 2f, z + 0.05f), new Vector3(0.08f, top * 1.3f, 0.05f), 30f, wood);
+            Deco(root, PrimitiveType.Cube, new Vector3(x, top / 2f, z + 0.05f), new Vector3(0.08f, top * 1.3f, 0.05f), -30f, wood);
+            Deco(root, PrimitiveType.Sphere, new Vector3(x + 0.3f, top + 0.3f, z - 0.2f), new Vector3(0.5f, 0.5f, 0.3f), 0f, rose);
+        }
+    }
+
+    // A small sitting cat with the control it teaches floating above it. Placeholder until cat art exists.
+    static void CatPrompt(Transform root, float x, string text)
+    {
+        float z = 0.8f;
+        Deco(root, PrimitiveType.Sphere, new Vector3(x, 0.3f, z), new Vector3(0.55f, 0.6f, 0.4f), 0f, catMat);
+        Deco(root, PrimitiveType.Sphere, new Vector3(x + 0.05f, 0.75f, z), new Vector3(0.42f, 0.38f, 0.38f), 0f, catMat);
+        Deco(root, PrimitiveType.Cube, new Vector3(x - 0.08f, 0.95f, z), new Vector3(0.12f, 0.12f, 0.1f), 45f, catMat);
+        Deco(root, PrimitiveType.Cube, new Vector3(x + 0.18f, 0.95f, z), new Vector3(0.12f, 0.12f, 0.1f), 45f, catMat);
+        Deco(root, PrimitiveType.Cube, new Vector3(x - 0.35f, 0.25f, z), new Vector3(0.08f, 0.5f, 0.08f), 35f, catMat);
+
+        GameObject label = new GameObject("Prompt " + text);
+        label.transform.SetParent(root, false);
+        label.transform.localPosition = new Vector3(x, 1.6f, z);
+        TextMesh tm = label.AddComponent<TextMesh>();
+        tm.text = text;
+        tm.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        tm.GetComponent<MeshRenderer>().sharedMaterial = tm.font.material;
+        tm.fontSize = 48;
+        tm.characterSize = 0.06f;
+        tm.anchor = TextAnchor.MiddleCenter;
+        tm.color = new Color32(120, 50, 70, 255);
+    }
+
+    // An oversized flower standing behind the play area: stem, two leaves, five petals and a center.
+    static void Flower(Transform root, float x, float height, float size, float z, Material petals)
+    {
+        Deco(root, PrimitiveType.Cube, new Vector3(x, height / 2f, z), new Vector3(0.18f * size, height, 0.1f), 0f, stem);
+        Deco(root, PrimitiveType.Sphere, new Vector3(x + 0.35f * size, height * 0.4f, z), new Vector3(0.8f * size, 0.25f * size, 0.1f), 25f, stem);
+        Deco(root, PrimitiveType.Sphere, new Vector3(x - 0.35f * size, height * 0.6f, z), new Vector3(0.8f * size, 0.25f * size, 0.1f), -25f, stem);
+        for (int i = 0; i < 5; i++)
+        {
+            float a = i * 72f * Mathf.Deg2Rad;
+            Deco(root, PrimitiveType.Sphere, new Vector3(x + Mathf.Sin(a) * 0.55f * size, height + Mathf.Cos(a) * 0.55f * size, z),
+                new Vector3(0.75f * size, 0.75f * size, 0.1f), 0f, petals);
+        }
+        Deco(root, PrimitiveType.Sphere, new Vector3(x, height, z - 0.05f), new Vector3(0.5f * size, 0.5f * size, 0.1f), 0f, pollenGold);
+    }
+
+    // Big flowers behind the path and pollen drifting over the whole garden. No background: that's custom art.
+    static void Dressing(Transform root)
+    {
+        Flower(root, 6f, 3.5f, 1.3f, 1.6f, peach);
+        Flower(root, 11.5f, 5f, 1.6f, 2.2f, rose);
+        Flower(root, 21f, 2.5f, 0.9f, 1.2f, cream);
+        Flower(root, 26f, 4.2f, 1.4f, 2f, peach);
+        Flower(root, 34f, 3.2f, 1.2f, 1.5f, rose);
+        Flower(root, 38.5f, 5.5f, 1.7f, 2.4f, cream);
+        Flower(root, 51f, 6f, 1.5f, 2.2f, peach);
+        Flower(root, 58.5f, 3f, 1f, 1.3f, rose);
+        Flower(root, 64.5f, 4.6f, 1.5f, 2f, cream);
+
+        GameObject go = new GameObject("Pollen");
+        go.transform.SetParent(root, false);
+        go.transform.localPosition = new Vector3(35f, 4f, 0.3f);
+        ParticleSystem ps = go.AddComponent<ParticleSystem>();
+        var main = ps.main;
+        main.startLifetime = 9f;
+        main.startSpeed = 0.15f;
+        main.startSize = new ParticleSystem.MinMaxCurve(0.05f, 0.14f);
+        main.startColor = (Color)new Color32(255, 236, 170, 220);
+        main.maxParticles = 200;
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.prewarm = true;
+        var emission = ps.emission;
+        emission.rateOverTime = 20f;
+        var shape = ps.shape;
+        shape.shapeType = ParticleSystemShapeType.Box;
+        shape.scale = new Vector3(72f, 8f, 0.5f);
+        var noise = ps.noise;
+        noise.enabled = true;
+        noise.strength = 0.4f;
+        noise.frequency = 0.2f;
+        Shader sh = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+        if (sh == null) sh = Shader.Find("Sprites/Default");
+        string path = MatFolder + "/GardenPollen.mat";
+        Material m = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (m == null) { m = new Material(sh); AssetDatabase.CreateAsset(m, path); }
+        go.GetComponent<ParticleSystemRenderer>().sharedMaterial = m;
+    }
+
+    // Decoration: a primitive without a collider.
+    static GameObject Deco(Transform parent, PrimitiveType type, Vector3 pos, Vector3 scale, float rotZ, Material mat)
+    {
+        GameObject go = GameObject.CreatePrimitive(type);
+        Object.DestroyImmediate(go.GetComponent<Collider>());
+        go.name = "Deco";
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = pos;
+        go.transform.localRotation = Quaternion.Euler(0f, 0f, rotZ);
+        go.transform.localScale = scale;
+        go.GetComponent<Renderer>().sharedMaterial = mat;
+        return go;
     }
 
     static void AddSprite(Transform root, string name, Sprite sprite, float cx, float cy, float w, float h)
@@ -194,15 +382,23 @@ public static class Level1Builder
         sr.size = new Vector2(w, h);
     }
 
-    static void AddItem(Transform root, string name, int tileX, int tileY, Material mat)
+    // A memory item: its pixel-art sprite (Assets/Art/Items/<name>.png) with a trigger to pick it up.
+    // The door at the end of the level stays locked until she has them.
+    internal static void AddItem(Transform root, string name, float tileX, float tileY)
     {
-        GameObject go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        go.name = name;
+        Sprite sprite = LoadSprite("Assets/Art/Items/" + name.ToLower() + ".png", 16f);
+        GameObject go = new GameObject(name);
         go.transform.SetParent(root, false);
         go.transform.localPosition = new Vector3(tileX + 0.5f, tileY + 0.5f, 0f);
-        go.transform.localScale = new Vector3(0.6f, 0.6f, 0.6f);
-        go.GetComponent<Renderer>().sharedMaterial = mat;
-        go.GetComponent<Collider>().isTrigger = true;
+        go.AddComponent<SpriteRenderer>().sprite = sprite;
+        SphereCollider col = go.AddComponent<SphereCollider>();
+        col.isTrigger = true;
+        col.radius = 0.5f;
+        CollectableScript c = go.AddComponent<CollectableScript>();
+        c.playerScript = playerScript as BaseMovement;
+        if (c.playerScript == null) c.playerScript = Object.FindFirstObjectByType<BaseMovement>();
+        c.name = name;
+        c.displayImage = sprite;
     }
 
     // Lamppost checkpoint: 1 x 2.5 units (32x80 px at 32 px per unit), standing on the floor at tileX.

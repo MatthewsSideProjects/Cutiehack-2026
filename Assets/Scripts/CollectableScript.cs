@@ -5,11 +5,11 @@ public class CollectableScript : MonoBehaviour
     public BaseMovement playerScript;
     public string name;
     public Sprite displayImage;
-    private MeshRenderer renderer;
+    private Renderer renderer; // mesh (old spheres) or sprite (pixel-art items)
     private CollectableScript thisScript;
     private void Start()
     {
-        renderer = GetComponent<MeshRenderer>();
+        renderer = GetComponent<Renderer>();
         thisScript = GetComponent<CollectableScript>();
     }
     private void OnTriggerEnter(Collider other)
