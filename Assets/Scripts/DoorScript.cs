@@ -10,9 +10,7 @@ using System.Collections.Generic;
 public class DoorScript : MonoBehaviour
 {
     public Transform destination;       // where she appears in the next level
-    public string nextScene;            // set on the last door: the world collapses into it, then this scene loads
-    public float collapseTime = 2.8f;
-    public float doorHoldTime = 3f;    // how long only the door is left before the light takes over
+    public string nextScene;            // set on the last door: she wakes up into this scene
     public int itemsNeeded = 0;         // memory items from this level she must carry before it opens
     public Sprite closedSprite;
     public Sprite openSprite;
@@ -200,18 +198,15 @@ public class DoorScript : MonoBehaviour
         if (open) beams.localScale = Vector3.one * (1f + 0.06f * Mathf.Sin(Time.time * 3f));
     }
 
-    // The finale: she flies straight into the light, then the whole world spirals into the doorway.
-    // Things further out swirl more, so it twists like water down a drain. When it is gone only the
-    // door is left, glowing in the dark for a few seconds, before the light fills the screen.
+    // The finale: she flies straight into the light, then her eyes close and she wakes up in the
+    // Ending scene (EyeTransition: heavy blinks shut, then a flicker open on her sunrise room).
     private IEnumerator Collapse(BaseMovement player)
     {
         entering = true;
-        FinalLeap.Set(1f);
         CameraScript.Calm = true;
         player.lockControls();
         foreach (CreepingWall w in FindObjectsByType<CreepingWall>(FindObjectsSortMode.None)) w.enabled = false;
 
-        // She is swallowed by the light at once.
         Transform p = player.transform;
         SpriteRenderer playerSprite = player.GetComponentInChildren<SpriteRenderer>();
         Vector3 startPos = p.position, startScale = p.localScale;
@@ -224,67 +219,7 @@ public class DoorScript : MonoBehaviour
             yield return null;
         }
         p.localScale = Vector3.zero;
-
-        // Everything drawn in this level (and the darkness) gets pulled in; the door and the camera stay.
-        Vector3 c = transform.position;
-        Transform cam = Camera.main != null ? Camera.main.transform : null;
-        List<Transform> parts = new List<Transform>();
-        foreach (Renderer r in FindObjectsByType<Renderer>(FindObjectsSortMode.None))
-        {
-            Transform t = r.transform;
-            if (t == transform || t.IsChildOf(transform) || t.IsChildOf(p) || (cam != null && t.IsChildOf(cam))) continue;
-            if (!t.IsChildOf(transform.root) && Mathf.Abs(t.position.x - c.x) > 60f) continue;
-            if (parts.Contains(t)) continue;
-            if (r.TryGetComponent(out Rigidbody rb)) rb.isKinematic = true;
-            if (r.TryGetComponent(out Collider col)) col.enabled = false;
-            if (r is ParticleSystemRenderer) { r.enabled = false; continue; } // wisps just vanish
-            parts.Add(t);
-        }
-        int n = parts.Count;
-        Vector3[] off0 = new Vector3[n], scale0 = new Vector3[n];
-        Quaternion[] rot0 = new Quaternion[n];
-        float[] swirl = new float[n];
-        for (int i = 0; i < n; i++)
-        {
-            off0[i] = parts[i].position - c;
-            scale0[i] = parts[i].localScale;
-            rot0[i] = parts[i].rotation;
-            swirl[i] = 1f + new Vector2(off0[i].x, off0[i].y).magnitude / 12f; // far things spin more
-        }
-
-        for (float t = 0f; t < 1f; t += Time.deltaTime / collapseTime)
-        {
-            float e = t * t * t; // slow start, then everything rushes in
-            for (int i = 0; i < n; i++)
-            {
-                if (parts[i] == null) continue;
-                Quaternion spin = Quaternion.Euler(0f, 0f, 360f * swirl[i] * e);
-                Vector3 off = off0[i];
-                float z = off.z;
-                off.z = 0f;
-                Vector3 q = spin * off * (1f - e);
-                parts[i].position = c + new Vector3(q.x, q.y, z * (1f - e) + 0.3f); // tucks just behind the door
-                parts[i].localScale = scale0[i] * (1f - e);
-                parts[i].rotation = spin * rot0[i];
-            }
-            yield return null;
-        }
-        foreach (Transform t in parts) if (t != null) t.gameObject.SetActive(false);
-
-        // Just the door, glowing, for a few seconds.
-        yield return new WaitForSeconds(doorHoldTime);
-
-        Image fade = MakeFade();
-        for (float t = 0f; t < 1f; t += Time.deltaTime / 1.2f)
-        {
-            fade.color = new Color(1f, 0.93f, 0.82f, t); // warm sunrise white
-            if (beams != null) beams.localScale = Vector3.one * (1f + 3f * t); // the light swells to fill the screen
-            yield return null;
-        }
-        fade.color = new Color(1f, 0.93f, 0.82f, 1f);
-        yield return new WaitForSeconds(0.4f);
-        CameraScript.Calm = false;
-        SceneManager.LoadScene(nextScene);
+        EyeTransition.Create(0f).GoTo(nextScene);
     }
 
     private static Image MakeFade()

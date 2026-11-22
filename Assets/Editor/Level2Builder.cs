@@ -144,8 +144,9 @@ public static class Level2Builder
         float cakeCx = (CakeLeft + CakeRight + 1) / 2f;
         float cakeW = CakeRight + 1 - CakeLeft + 2f; // includes the side walls
 
-        // Side walls of the cake. They stop 2.2 above the ground, leaving a little doorway on each side.
-        float wallBottom = Ground + 2.2f;
+        // Side walls of the cake. They stop 3 above the ground, leaving a doorway on each side that
+        // Regular (about 1.5 tall) walks through easily, even mid-hop.
+        float wallBottom = Ground + 3f;
         float wallY = (wallBottom + summit) / 2f, wallH = summit - wallBottom;
         Box(root, "Cake wall left", CakeLeft - 0.5f, wallY, 1f, wallH, cakeMat, null);
         Box(root, "Cake wall right", CakeRight + 1.5f, wallY, 1f, wallH, cakeMat, null);
@@ -302,8 +303,13 @@ public static class Level2Builder
     // giant plates, a faded clock stuck at one time, and stretched balloons.
     static void Dressing(Transform root)
     {
-        Deco(root, "Backdrop", 70f, 14f, 170f, 40f, 3f, purpleMat);
-
+        // Painted party (Assets/Art/level_2_frame.jpg): balloons, cake table, melting clock. Far back (z 15)
+        // so it drifts slowly behind the play. 60 units tall covers the perspective view; the wall/floor line
+        // (68% down the picture) sits where the floor top (y 0) appears with the camera at rest (y ~6.16):
+        // at z 15 that is y = -1.5 * 6.16 = -9.24, so centre y = -9.24 + 0.184 * 60 = 1.8.
+        // A wall-coloured panel behind fills the sky above it when she climbs the cake.
+        Level1Builder.Backdrop(root, "Assets/Art/level_2_frame.jpg", 70f, 1.8f, 15f, 200f, 60f);
+        Deco(root, "Backdrop", 70f, 30f, 260f, 120f, 16f, Level1Builder.GetMaterial("Level2Wall", new Color32(37, 40, 143, 255)));
         // Polka dots on the front of every tablecloth floor (x1, x2, bottom, top) and the small table.
         var cloth = new (float x1, float x2, float y1, float y2)[]
         {
@@ -318,36 +324,6 @@ public static class Level2Builder
                 for (float x = c.x1 + 0.6f + (row % 2) * 0.7f; x < c.x2 - 0.3f; x += 1.4f)
                     Shape(root, PrimitiveType.Sphere, "Dot " + ++n, new Vector3(x, y, -0.53f),
                         new Vector3(0.45f, 0.45f, 0.05f), 0f, n % 2 == 0 ? lemonMat : mintMat);
-        }
-
-        // Giant plates: a white rim with a cream middle.
-        var plates = new (float x, float y, float d)[] { (14f, 9f, 9f), (44f, 14f, 11f), (80f, 19f, 10f) };
-        foreach (var p in plates)
-        {
-            Disc(root, "Giant plate " + p.x, p.x, p.y, p.d, 2.5f, plateMat);
-            Disc(root, "Giant plate middle " + p.x, p.x, p.y, p.d * 0.7f, 2.45f, creamMat);
-        }
-
-        // Faded clock, stuck: the hands never move.
-        Vector3 clock = new Vector3(60f, 17f, 2.4f);
-        Disc(root, "Clock", clock.x, clock.y, 7f, clock.z, clockMat);
-        for (int h = 0; h < 12; h++)
-            Hand(root, "Clock tick " + h, clock, h * 30f, 2.8f, 0.6f, 0.15f, purpleMat);
-        Hand(root, "Clock hour hand", clock, 100f, 0f, 1.8f, 0.3f, purpleMat);
-        Hand(root, "Clock minute hand", clock, 230f, 0f, 2.7f, 0.18f, purpleMat);
-
-        // Stretched balloons on strings, leaning a little.
-        var balloons = new (float x, float y, float tilt, Material mat)[]
-        {
-            (6f, 11f, 6f, hotPinkMat), (27f, 14f, -4f, mintMat), (36f, 10f, 8f, lemonMat),
-            (68f, 13f, -6f, hotPinkMat), (92f, 18f, 5f, lemonMat), (101f, 15f, -8f, mintMat),
-        };
-        foreach (var b in balloons)
-        {
-            Shape(root, PrimitiveType.Sphere, "Balloon " + b.x, new Vector3(b.x, b.y, 2.2f),
-                new Vector3(1.4f, 3.2f, 0.3f), b.tilt, b.mat);
-            Shape(root, PrimitiveType.Cube, "Balloon string " + b.x, new Vector3(b.x, b.y - 3.6f, 2.25f),
-                new Vector3(0.06f, 4f, 0.05f), 0f, plateMat);
         }
     }
 
