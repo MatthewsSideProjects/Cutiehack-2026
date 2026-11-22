@@ -25,6 +25,7 @@ public class TimerScript : MonoBehaviour
         if (time <= 0)
         {
             running = false;
+            Debug.Log("Dream timer ran out: player frozen (endGame Timeout). Raise Start Time on the Timer Text to play longer.");
             playerScript.endGame(DeathType.Timeout);
         }
         if (time < 10)
