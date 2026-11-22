@@ -73,7 +73,7 @@ public class CreepingWall : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (player != null && other.gameObject == player.gameObject) player.respawn();
+        if (player != null && other.gameObject == player.gameObject) player.die();
     }
 
     // Called from BaseMovement.respawn().

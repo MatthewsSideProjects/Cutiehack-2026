@@ -73,7 +73,7 @@ public static class RabbitPlayerSetup
             rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
         }
 
-        // Idle: rabbit_00..03. Run: rabbit_04..08.
+        // Idle: rabbit_00..03. Run: rabbit_04..08. Death frames load themselves from Assets/Resources/RabbitDeath.
         BaseMovement move = player.GetComponent<BaseMovement>();
         if (move != null)
         {
